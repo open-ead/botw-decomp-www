@@ -65,7 +65,7 @@ async function main() {
     const entries = await loadEntries();
     const last = entries[entries.length - 1];
 
-    setValue(findField("decompiled"), `${formatProgress(last.decompiled, last.total)}`);
+    setValue(findField("decompiled"), `${last.decompiled.size}/${last.total.size} bytes - ${formatProgress(last.decompiled, last.total)}`);
     setValue(findField("matching"), `${formatProgress(last.matching, last.total)}`);
     setValue(findField("nonmatching-minor"), `${formatProgress(last.nmMinor, last.total)}`);
     setValue(findField("nonmatching-major"), `${formatProgress(last.nmMajor, last.total)}`);
