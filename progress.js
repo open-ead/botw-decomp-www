@@ -42,6 +42,11 @@ async function loadEntries() {
         });
     }
 
+    for (const entry of entries) {
+        // use the last entry to find out the total number of functions / bytes to decompile
+        entry.total = entries[entries.length - 1].total;
+    }
+
     return entries;
 }
 
