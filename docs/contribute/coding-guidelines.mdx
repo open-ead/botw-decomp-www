@@ -1,0 +1,115 @@
+---
+title: Coding guidelines
+description: A set of coding style guidelines that you should adhere to whenever possible.
+sidebar_position: 3
+---
+
+BotW has 40MB of code and contributors need to read and modify existing parts of the codebase very often: inconsistencies lead to increased mental overhead and a loss of efficiency which we cannot afford considering our limited manpower.
+
+That is why we have a set of coding style guidelines that contributors are expected to adhere to.
+
+To reduce the amount of time wasted on formatting issues, we use [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to automatically enforce a consistent coding style. We also use [clang-tidy](https://clang.llvm.org/extra/clang-tidy/) to detect common style issues, programming errors, and error prone code.
+
+All pull requests are run through clang-format and clang-tidy and must pass both before they can be merged.
+
+Before opening a PR, please format your code with clang-format 12+ and ensure the following guidelines are followed. That will allow your contributions to be reviewed more quickly.
+
+## Code style
+
+The most important rule: look around and follow the existing code style (formatting, source organisation, ...) when possible.
+
+### General
+
+* Lines should not be longer than 100 characters.
+* Use 4 spaces to indent.
+* Use `nullptr`, not `NULL` or `0`.
+* Only use `auto` if the variable type is obvious, too long to type or if it doesn't matter.
+* To compare an integer against zero, write `if (value == 0)`, not `if (!value)`. (This rule doesn't apply to booleans.)
+* To compare a value against nullptr, either `if (pointer != nullptr)` or `if (pointer)` is fine.
+* Avoid useless parentheses:
+    * :heavy_check_mark: `if (x == Type::String || x == Type::Int)`
+    * :x: `if ((x == Type::String) || (x == Type::Int))`
+        <br /> Parens are just noise here: most people (especially anyone who has worked on a software project) are used to the lack of parentheses.
+    * :heavy_check_mark: `if ((foo && bar) || (x && y))`
+    * :x: `if (foo && bar || x && y)`
+        <br /> While parentheses are technically useless here, most people do not know their operator precedence for && and || by heart, so it's better to just add parens to make it clear what is being meant.
+
+### Header files
+
+* Use `#pragma once` for header guards.
+* Avoid unnecessary includes. Forward declare types when possible to reduce compilation times.
+
+### Includes
+
+* Use `#include "..."` when including U-King (BotW) header files. KingSystem (ksys) is treated as being part of BotW.
+    * Include paths should be relative to src/.
+        * :heavy_check_mark: `#include "KingSystem/ActorSystem/actActor.h"`
+        * :x: `#include "actActor.h"`
+
+* Use `#include <...>` for system or library includes. Examples:
+    * Standard C++ library headers (e.g. `<optional>`, `<type_traits>`, `<limits>`, ...)
+    * sead (e.g. `<prim/seadSafeString.h>`)
+    * Other Nintendo libraries like agl, evfl, eui, ...
+
+### Naming
+
+* Type names (classes/structs, enums, typedefs/alias declarations) and compile-time constants should be in UpperCamelCase.
+    * `class ActorInfoData`
+    * `using Manager = ksys::gdt::Manager;`
+    * `constexpr int NumActors = 42;`
+
+* Function names should be in camelCase.
+    * `void doStuff()`
+    * `void SomeClass::doThis()` (for a member function)
+
+* Variables should be in lowercase_snake_case, except for class member variables, which should be prefixed with 'm' and writtenLikeThis.
+    * `int a_dummy_variable = 42;`
+    * `void test(int first_argument, bool second_argument) { ... }`
+    * `class SomeClass { int mMemberVariable; };` (m prefix + camelCase)
+    * `struct SomeStruct { int member_variable; };` (regular snake_case)
+
+* Static variables should be prefixed with 's' and globals with 'g'.
+    * `s_static_variable`
+    * `sStaticVariable` if it's a static member variable
+
+### Classes
+* Ordering
+   * Put access specifiers in this order: `public`, `protected`, `private`.
+   * Declare member functions in this order: constructor, destructor, operators, other member functions.
+   * Declare non-static member variables after function declarations.
+   * Declare static member variables before non-static variables.
+   * Virtual functions need to match the original order in the executable, though, so ignore this rule if following it would require reordering virtual functions.
+* If a class uses a macro like `SEAD_SINGLETON_DISPOSER` or one of the SEAD_RTTI macros, put the macro right after the opening brace, before `public:`.
+* Use `= default;` instead of constructors/destructors with an empty body.
+* Use the `override` keyword instead of `virtual` when overriding virtual functions from a parent class.
+* Mark member functions as const if they do not modify any non-static member variables. (This is known as const correctness.)
+* Do not use `this->` to refer to member variables or member functions unless it is necessary. (It is usually unnecessary.)
+
+```cpp
+#pragma once
+
+namespace foo {
+
+class Test {
+    SEAD_RTTI_BASE(Test)
+
+public:
+    Test();
+    virtual ~Test() = default;
+    virtual bool isTest() const { return true; }
+    void doStuff() {}
+
+private:
+    static bool sFoo = false;
+    bool mMemberVariable = true;
+};
+
+class TestDerived : public Test {
+public:
+    bool isTest() const override { return true; }
+};
+
+}  // namespace foo
+```
+
+(Notice the line breaks on the namespace opening and closing lines.)

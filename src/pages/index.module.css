@@ -1,0 +1,44 @@
+#page :global .main-wrapper {
+  display: flex;
+}
+
+.heroBanner {
+  display: flex;
+  padding: 5rem 0;
+  font-family: var(--botw-ui-font);
+  color: var(--botw-white);
+  flex: 1;
+  align-items: center;
+}
+
+.heroBanner :global .hero__title {
+  margin-bottom: 3rem;
+}
+
+.heroBanner :global .hero__title a {
+  color: var(--botw-white);
+}
+
+.heroBanner :global .button {
+  background-color: var(--botw-white);
+}
+
+.card {
+  font-size: 1.3rem;
+  margin-bottom: 1em;
+}
+
+@media screen and (max-width: 996px) {
+  .heroBanner {
+    padding: 2rem 0;
+  }
+
+  .heroBanner :global .hero__title {
+    font-size: 3rem;
+  }
+
+  .card {
+    font-size: 1.1rem;
+    margin-bottom: 2em;
+  }
+}

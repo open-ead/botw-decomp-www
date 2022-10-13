@@ -1,0 +1,254 @@
+---
+title: About this project
+sidebar_position: 0
+displayed_sidebar: null
+pagination_next: contribute/index
+---
+
+# Breath of the Wild Decompilation
+
+<h3>
+  An experimental, WIP decompilation of <i>Breath of the Wild</i> v1.5.0 (Switch)
+</h3>
+
+
+## What is this?
+
+This is an ongoing reverse engineering project to analyse and decompile/reimplement part of *The Legend of Zelda: Breath of the Wild* (Switch v1.5.0).
+
+More specifically, we are reimplementing the main [executable](https://en.wikipedia.org/wiki/Executable) using the technique of *matching decompilation*.
+
+:::caution Important note
+  This project does not contain game assets or RomFS content and **cannot** be used to play *Breath of the Wild*.
+:::
+
+### Decompilation
+
+*Decompilation* is the process of turning compiled code back into equivalent, human-readable source code.
+
+For a modern game such as *Breath of the Wild*, that involves reading the compiled code, trying to understand what it does, and then reimplementing the logic in original C++ code.
+
+#### Matching decompilation
+
+*Matching* decompilation goes one step further and produces source code that **compiles to the exact same machine code**.
+That makes it very easy to verify our implementation is functionally equivalent to the original one: the machine code can directly be compared against the original executable.
+
+While our source code is functionally equivalent to the original compiled code, it is almost surely different from the original *source* code.
+Compiling is a lossy process, so the original codebase cannot be recovered with this technique. (And recovering Nintendo's original copy of the source code is not the goal of the project anyway.)
+
+### Reimplementation
+
+*Traditional* matching decompilation produces source code that is very close to the original source, as there isn't much leeway to deviate from it while still matching the original machine code.
+
+However, the situation is quite different with modern compilers (such as Clang) which optimise very aggressively.
+It is not uncommon for two very different code snippets to produce the same machine code!
+This is especially true with languages such as C++ and Rust which emphasise *zero cost abstractions* &mdash; the concept of being able to write high-level code that compiles into optimised code on par with optimised low-level code you might have tediously written by hand.
+
+Having zero cost abstractions and good compilers means that we can usually implement a function however we want and:
+
+* either have our reimplemented version "match" (i.e. produce the same compiled code) on the first try
+* or be able to massage our implementation into matching &mdash; with relative ease
+
+This significantly blurs the lines between reimplementation and matching decomp, to the point this project should be considered a **hybrid decompilation/reimplementation** rather than a pure decomp project.
+
+Coupled with the fact we use standard development tooling, working on this project can feel a lot like working on a regular software project, just with weird specs and an unusual unit testing mechanism (assembly diffing).
+
+### What this is not
+
+As explained above, this is a decompilation/reimplementation project. Just to clear up possible misunderstandings, this project is *none of the following*:
+
+* **A complete reconstruction of the entire game (including assets).** BotW is a modern game with a clear separation between the executable and asset files (e.g. models, sounds, configuration files, etc.) so we can focus on the interesting parts (the executable) and leave the assets alone.
+
+* **A way to play BotW if you do not own the game.** This project is completely useless to anyone who does not own the game.
+
+* **A way to play BotW on PC or [insert platform].** This is a reverse engineering project, not a port. Porting the game to other platforms is **explicitly a non-goal**.
+
+* **A code modding tool.** Currently this project does not produce a working executable; the generated ELF only contains reimplemented functions, so this project cannot be directly used for code modifications. However, the knowledge (function names, type definitions, etc.) contained within the repository should be highly useful for anyone who wants to actually mod the game.
+
+* **A traditional matching decomp project.** Given the impossibility of automatically splitting the assembly (as is done in many other decomp projects), the sheer size of the main executable and the usage of many software libraries, this project takes an experimental approach to matching decompilation.
+
+  Instead of trying to match the entire executable, each function is matched individually and source code is organised in whichever way makes the most sense.
+  No effort is currently being made to put functions and data at the original memory addresses.
+
+  The result is that the codebase looks a lot more like a regular software project than a decompilation codebase.
+  And since C++ code makes heavy use of inline functions and zero cost abstractions that disappear in compiled code, contributors have a lot more leeway when it comes to organising files and adding abstractions.
+
+## Why?
+
+The goal of this project is to better understand game internals, aid with glitch hunting and document existing knowledge in a permanent, unambiguous form which helps further reverse engineer the game.
+
+Each contributor has different reasons for contributing, but most of us want to help achieve those goals and/or find it fun. (Yes, decomp can be fun! Reverse engineering a game such as *Breath of the Wild* is basically like solving a giant puzzle.)
+
+Let's be realistic &mdash; considering the large size of the executable (~40MB) and our limited manpower, it is not expected to reach 100% [progress](/progress) anytime soon. But even in its incomplete state, it will help with understanding and reverse engineering the game.
+
+:::caution Reminder
+Porting the entire game to other platforms is **explicitly a [non-goal](#what-this-is-not)**. Anyone claiming otherwise is misinformed.
+:::
+
+## Project scope
+
+Only the main executable (BotW code + most statically linked libraries) is in scope.
+The RomFS and the SDK libraries are out of scope.
+
+Excluded libraries will not be fully decompiled but may be partly re-implemented or decompiled, and (reverse-engineered) headers will be provided so that the rest of the codebase can still use those libraries.
+
+* :heavy_check_mark: Main executable (main NSO)
+    * *Breath of the Wild* code
+        * :heavy_check_mark: Actual game code (`Game` / uking:: namespace)
+        * :heavy_check_mark: Framework/engine code (`KingSystem` / ksys:: namespace)
+    * Statically linked libraries
+        * :heavy_check_mark: First-party libraries (e.g. sead, agl, EventFlow, etc.)
+        * :heavy_check_mark: NintendoSDK inlined utilities
+        * :x: libcurl
+        * :x: NintendoSDK-NEX
+        * :x: Havok (physics engine), except inlined utilities
+        * :heavy_check_mark: Any other statically linked library
+* :x: Dynamically linked SDK libraries
+* :x: RomFS (assets)
+
+## Frequently Asked Questions
+
+### What is matching decompilation?
+
+This is explained in the [intro](#decompilation).
+
+### What language is BotW written in?
+
+*Breath of the Wild* is fully written in C++ &mdash; either C++11 or C++14. Our implementation uses C++17 to make things more convenient for our contributors.
+
+### What compiler was used?
+
+The Switch build of v1.5.0 was likely compiled with Clang 4.0.
+
+Nintendo is known to have their own proprietary fork of LLVM/Clang, but we do not know what changes were made to their compiler. So far, we have been able to match a lot of code using upstream Clang 4.0, though.
+
+### What version is being decompiled?
+
+We are decompiling the Switch 1.5.0 version because working with Clang is much nicer than working with the Wii U's proprietary compiler (GHS)... and also at least an order of magnitude nicer than dealing with most compilers that are used for other matching decomp projects for that matter.
+
+Cross-referencing code with the Wii U 1.5.0 build has proven to be useful on occasion though, because GHS often optimises and inlines differently, and that can help reveal the existence of inline functions.
+
+### Why not decompile 1.6.0?
+
+Because of aggressive compiler optimisations and severe code bloat, 1.6.0 is extremely painful to reverse engineer, let alone decompile. [See here](https://gist.github.com/leoetlino/3156c286c7232c2e73b9b74b91021353) for a comparison between 1.5.0 and 1.6.0 code of the main function (called `nnMain`).
+
+(The culprit is link time optimisation, which allows LLVM to perform extremely aggressive inlining even across translation units.)
+
+### Does the original executable contain function and variable names (symbols)?
+
+No, it does not. Unlike some other first-party Switch games such as *Super Mario Odyssey*, all known release builds of the game are fully *stripped*, i.e. they do not contain any symbols.
+
+### How do you name things then?
+
+Most names are just more or less educated guesses: many file names, class or function names come from leftover strings or from extrapolating existing names.
+
+As more parts of the game get reimplemented, it becomes easier to figure out what the rest of the game is doing and equally easier to name functions. It's a positive feedback loop.
+
+### How easy is it to match functions?
+
+Compared to other decomp projects for older compilers: **very easy**. Clang is an extremely reasonable compiler with much fewer memes than older compilers such as IDO or older versions of GCC:
+
+* Stack reordering issues are extremely rare, given that AArch64 uses its registers a lot more efficiently. Even when the stack is used, things Just Work™ in the vast majority of cases.
+* Pure register allocation (regalloc) issues are almost non-existent. If you see something that looks like a regalloc problem, it usually means your code is not semantically equivalent.
+* No `if (1)` shenanigans.
+* No "same line" memes (codegen being different if two statements are put on the same line).
+* Whitespace doesn't matter.
+
+In general, two equivalent constructs that *should* clearly produce the same code actually produce the exact same code. There are exceptions, of course, but many things simply do not matter at all for matching. Inline functions do often affect codegen, though.
+
+Getting perfect matches on the first try happens pretty often, even for medium-sized and large functions (>1kB).
+
+Most functions tend to call several other inline functions, notably utility functions from Nintendo's standard library (sead). As many core sead modules have already been reimplemented, decompiling a function sometimes only requires recognising those function calls. We are basically abstracting decompilation away!
+
+### I only have 1.6.0. Can I still contribute?
+
+Yes! You can contribute if you dump the 1.5.0 *or* 1.6.0 executable from your Switch.
+
+### Do I need to be a game dev or a C++ expert to contribute?
+
+No, of course not. But you should be somewhat familiar with software development practices and C++ or a language with object-oriented aspects such as Java or Python.
+
+Unlike many other decomp projects, familiarity with C or assembly is not required. The reason for this is that BotW is a modern game with many layers of abstractions. Many functions can be decompiled simply by recognising code patterns / inline functions. Our assembly comparing tool ([asm-differ](https://github.com/simonlindholm/asm-differ)) is also capable of showing how each line of assembly maps to the source code, so you won't get lost in the assembly even if you're unfamiliar with [AArch64](https://en.wikipedia.org/wiki/AArch64).
+
+AArch64 is also nicer to deal with than x86/x86-64 and should feel familiar to you if you have already worked with e.g. ARM or MIPS.
+
+While you certainly do not need to be a C++ expert, you do need to be familiar with basic language features and concepts like namespaces or classes. Otherwise, you will be unable to contribute in any efficient or meaningful way.
+
+### Does C++ make decomp harder?
+
+For BotW: **no**. Quite the opposite, in fact.
+
+:::note "C++ bad!!1!"
+Among certain circles, C++ has a bad reputation which isn't entirely ill-deserved: it's undeniably a complex language that is very difficult to learn and use correctly. And it doesn't help that it's often not *taught* properly as well &mdash; many resources teach the language like it was 20 years ago, not how it is today.
+
+However, the language has improved a lot in recent years and can definitely be a very powerful tool when used right.
+:::
+
+First of all, C++'s zero cost abstractions have forced compilers to step up their optimisation game which &mdash; as explained in the [intro](#reimplementation) &mdash; actually makes matching decomp a lot easier. We can even build our own abstractions to make implementing things easier without impacting our ability to match.
+
+Second, we can rely on C++ language features to make our life easier when reimplementing functions. Modern C++ is a lot more pleasant to write than 90s C (or C++98 for that matter) and gives us even more convenience features.
+
+* For instance, a lot of initialisation functions can be matched without writing a single line of function code:
+
+  ```cpp
+  class RagdollController {
+      // ...
+      SkeletonMapper* mSkeletonMapper = nullptr;
+      ModelBoneAccessor* mModelBoneAccessor = nullptr;
+      hkaRagdollInstance* mRagdollInstance = nullptr;
+      SystemGroupHandler* mGroupHandler = nullptr;
+      sead::Buffer<RigidBody*> mRigidBodies;
+  };
+  ```
+
+  You just declare how the member variables should be initialised or use objects that initialise themselves (like `sead::Buffer`), and the compiler automatically generates a constructor function that does what you want.
+
+* **Destructors** make it possible for objects to clean up after themselves. No need for manual cleanup code and `goto fail;` and no more forgetting to unlock a mutex before returning. ([RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) is such a useful pattern that it also exists in Rust, completely unchanged.)
+
+* **Templates** make it possible to write typesafe generic code with ease. And in the context of matching decomp, they enable us to match dozens of functions by just writing a single function template! The mantras 'work smart, not hard' and 'don't repeat yourself' come to mind. (We are not talking about heavy template metaprogramming &mdash; which Nintendo games do not use for the most part.)
+
+* **Operator overloading.** When used carefully &mdash; and Nintendo does use it well &mdash; operator overloading can be a nice readability improvement. Adding two vectors together is just `u + v` instead of `{u.x + v.x, u.y + v.y, u.z + v.z}` (or a horrible macro or unergonomic explicit function call).
+
+* Types can be deduced with `auto`, so you don't need to repeat yourself (e.g. when casting or when the type is really obvious).
+
+Last but not least, C++ language features (e.g. classes, virtual functions, hierarchy, etc.) leak a lot of information about the structure of the game codebase, which helps with understanding the codebase and organising our reimplementation.
+
+Reverse engineering and decompiling C++ code does require some knowledge of how certain C++ features are implemented, but that will be explained in due time.
+
+### How can I help?
+
+Head over to the [contributing docs](/contribute) for more information about contributing to the project, including an FAQ for new contributors.
+
+<details>
+  <summary>Is this legally risky?</summary>
+
+Let us first say that we believe what we are doing to be legal &mdash; otherwise we would not be doing it (obviously).
+
+But just like other game decompilations, this project is in a legal gray zone.
+There are literally no legal precedents for this kind of work in any jurisdiction.
+Nevertheless, the authors of this project believe that it is unlikely to bother NCL for the following reasons:
+
+* Contributing to this project requires owning the game on a Switch console and dumping the executable.
+* This project is completely useless to anybody who does not have the game.
+    * It cannot be used to play the game.
+    * It does not give you any useful knowledge if you do not play the game or if you do not even have it.
+* This project is only about the executable, which is less than 0.3% of the whole game.
+* Even if the executable were fully decompiled, it would still not be possible to play the game without dumping the RomFS from a Switch.
+* This project does not contain any original code from the executable.
+    * Unlike some decompilation projects for older consoles, not even a single byte of assembly code is included from the original executable. It only contains reimplemented functions.
+    * Contributions that copy the assembly &mdash; or the pseudocode given by tools such as Hex-Rays or Ghidra &mdash; are rejected. We only accept contributions that are transformative in nature.
+    * The compiler is Clang, so there are many, many, many ways to write a function and organise things while still getting the exact same code.
+    It is extremely likely that the original codebase looks very different from our implementation.
+* This project does not use any proprietary SDK or any leaked BotW document at all.
+    * The compiler is just Clang 4.0 which is freely available on [LLVM's website](https://releases.llvm.org/). The SDK compiler is **not** used.
+    * Anyone who has had access to leaked information about BotW is not allowed to contribute.
+
+#### Why not do a clean room reimplementation to minimise risk?
+
+This is a large monolithic game so matching decompilation is the only realistic way of ensuring any reimplementation is fully accurate to the original logic.
+
+Clean room design (i.e. having separate teams doing reverse engineering and implementation work) is not a solution when the goal is to follow the original logic as accurately as possible. Especially not with our current manpower.
+
+And even if it were, clean room design is not an bulletproof legal defense and does not prevent frivolous litigation.
+
+</details>

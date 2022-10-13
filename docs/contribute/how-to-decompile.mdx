@@ -1,0 +1,183 @@
+---
+title: How to decompile
+description: A step-by-step guide to decompiling
+sidebar_position: 2
+---
+
+This is a step-by-step guide to decompiling. Don't worry if you are not quite sure how to follow some of those steps (e.g. how to reimplement in C++) &mdash; this page exists to give you a complete overview of the decomp process.
+
+If you are new to the project, we recommend that you read this entire document and any other explanatory docs (e.g. [primers](/tags/primer)) you think might be useful *before* you start decompiling.
+
+## Process
+
+0. Run `tools/check` to make sure the project is set up correctly. You should see `OK` at the end.
+
+1. **Pick a function that you want to decompile.**
+    * Prefer choosing a function that you understand or that is already named in your IDA/Ghidra database.
+    * You do not need to fully understand the function, but you should at least have a rough idea of what it does.
+    * If you are feeling more ambitious, pick an entire C++ class! This usually allows understanding the code better.
+    * Use our [Trello project board](https://botw.link/trello) to figure out what needs to be decompiled. Make sure it's not already being worked on by somebody else!
+        * "<span style={{ color: '#42f508' }}>Easy</span>" tasks are useful to familiarise yourself with the decomp process. Those tasks can typically be done pretty quickly.
+        * The "<span style={{ color: 'yellow' }}>Blocked</span>" label means that the task cannot be easily done at the moment because it requires something else to be decompiled or stubbed first.
+        * "Requires library integration" tasks require decompiling an external library (e.g. agl, sead, ...) and integrating it into the project.
+        * "Manager/singleton" means that the task is about a manager or a singleton (a class with only a single instance).
+        * If you want to work on libraries rather than on BotW code, take a look at [this board](https://botw.link/trello-libs)!
+        * Search for the card's label in IDA to locate relevant functions to decomp. If you can't find any good match, feel free to [ask somebody to clarify the task on Discord](#need-help).
+
+2. **Try to understand** what the function does using Hex-Rays or Ghidra.
+    * Understanding the function is very important.
+    * Rename variables, add structures, do everything you can to make the output as clean as possible.
+    * C++ code tends to make heavy use of inline functions. For example, inlined string comparisons or copies are very common and tend to obscure what the function does. Focus on the outline of the function (no pun intended).
+    * The [cheatsheet](/cheatsheet) can help you recognise inline functions.
+
+3. **Implement the function in C++.**
+    * Stay close to the original code, but not too close: your code should mostly look like normal, clean C++ code. If it does not, chances are that you won't get a good match at all.
+    * Do **NOT** copy and paste any pseudocode. **Reimplement it**. While we cannot go for a fully "clean room" approach, you should be reimplementing code, not copy/pasting from the original executable. PRs that violate this rule will be rejected.
+
+    * You usually have a lot of leeway when reimplementing a function, but some things must be kept the same in your reimplemented version in order to have any chance of getting a matching function:
+        * _Function calls_. You should not add or remove non-inlined function calls.
+        * Struct/class member variable offsets.
+        * Be careful with float comparisons. Because of float semantics, `if (x < y) f(); else g();` and `if (x >= y) g(); else f();` are **not** functionally equivalent (because they behave differently if one of the floats is NaN).
+
+    * Things that you can change in your reimplemented version:
+        * _Names_. Some of the function/variable names are just placeholders, so feel free to use your own names if you think they are better.
+        * _Functions_. You are free to split a function into several smaller functions or introduce utility functions, even if there isn't an explicit function call in the original code, as long as your reimplemented functions are getting inlined.
+            * Note that LLVM will usually not inline functions if they are too large.
+        * `if (x) f(); else g();` and `if (!x) g(); else f();` generally produce the same code. Use [early exits](https://llvm.org/docs/CodingStandards.html#use-early-exits-and-continue-to-simplify-code) when possible.
+
+    * Keep in mind that decompilers can only produce C pseudocode. Some function calls may be C++ member function calls.
+    * Identify inlined functions and *uninline* them. For example, if you see a string copy, do **not** write the copy loop manually! Instead, call the inline function and let the compiler inline the function for you.
+    * Identify duplicate pieces of code: those are usually a sign that a function was inlined. Refactor the duplicated piece of code into a separate function (or figure out what function has been inlined) and call it. The [cheatsheet](/cheatsheet) can help with this.
+    * Non-inline function calls can just be stubbed if you don't feel like decompiling them at the moment. To "stub" a function, just declare the function (and the enclosing class/namespace/etc. if needed) without implementing/defining it.
+    * Follow the [coding style guidelines](coding-guidelines) where applicable.
+
+4. **Build**.
+
+5. **Add the function name to the list of decompiled functions.**
+    * To do so, open `data/uking_functions.csv`, search for the name or the address of function you have decompiled, and add the function name to the last column.
+
+        ```csv title="data/uking_functions.csv"
+        0x00000071010c0d60,U,136,BaseProcMgr::createInstance
+        ```
+
+6. **Compare the assembly** with `tools/check -mw <function name>`
+    * This will bring up a two-column diff. The code on the left is the original code; the code on the right is your version of the function.
+    * You may ignore address differences (which often show up in adrp+ldr pairs or bl or b).
+    * If you modify a source file while the diff is visible, it will be automatically rebuilt and the diff will update to match the new assembly code.
+      * Remove `-mw` from the command if you do not want automatic rebuilds.
+    * Other useful flags:
+      * To show C++ source code interleaved with the assembly in the diff, pass `-c` or `--source`.
+      * To get a three-column diff (original, decomp, diff with last decomp attempt), pass `-3` (do not use with `-c`).
+
+7. **Tweak the code to get a perfectly matching function** (if possible).
+    * Clang is usually quite reasonable so it is very common for functions -- even complicated code -- to match on the first try.
+    * **Focus on large differences.** If you have large differences (e.g. entire sections of code being at the wrong location), focus on getting rid of them first and ignore small differences like regalloc or trivial reorderings.
+    * **Regalloc:** If you only have regalloc differences left in a function that *looks* semantically equivalent, double-check whether it is truly equivalent: such differences are typically caused by using the wrong variable. It is rare for LLVM to use a different set of registers if the code is equivalent.
+    * This is usually the most difficult part of matching decomp. Please ask on Discord if you [need help](#need-help)!
+    * The [cheatsheet](/cheatsheet) might help you recognize code patterns and contains a checklist for common matching issues.
+
+8. **Update the list of decompiled functions**.
+    * If you have a function that matches perfectly, great!
+    * If there are still differences left, write a "NON_MATCHING:" comment to explain what is wrong.
+        ```cpp
+        // highlight-start
+        // NON_MATCHING: two sub instructions reordered
+        // highlight-end
+        void ContactMgr::clearContactPoints() { ... }
+        ```
+        * If you only have minor differences left, change the status (the second column) to `m` in the CSV.
+        * For major differences (lots of red/green/blue lines in the diff), use a capital `M` (major difference) in place of `m`.
+
+9. Before opening a PR, reformat the code with clang-format and run `tools/check`.
+    * You can use clang-format via your editor &mdash; VSCode and CLion have built-in clang-format support &mdash; or by calling `git clang-format` (for files you have `git add`ed and not yet committed).
+    * If your editor does not have built-in support for clang-format, or if you need to invoke clang-format in a terminal, you'll need to install it manually.
+      * If your Linux distro or system (e.g. macOS) does not package clang-format 12, you can download it from [the LLVM project website here](https://releases.llvm.org/download.html).
+
+## Matching hacks
+
+If a function is inlined, you should try as hard as possible to make it match perfectly. It is better to use weird code or small hacks to force a match as differences would otherwise appear in every single function that inlines the non-matching code, which makes it much more complicated to match other functions.
+
+If a hack is used, wrap it inside a `#ifdef MATCHING_HACK_NX_CLANG`.
+
+Example: the following function was a good candidate for a matching hack because it's a string function that is inlined everywhere.
+
+```cpp title="lib/EventFlow/include/ore/StringView.h"
+template <typename T>
+constexpr size_t StringLength(const T* str) {
+    if (str == nullptr || str[0] == 0)
+        return 0;
+
+    size_t len = 0;
+    while (*str++ != 0)
+        ++len;
+
+// highlight-start
+#ifdef MATCHING_HACK_NX_CLANG
+    __builtin_assume(len <= 0xffffffff);
+#endif
+// highlight-end
+    return len;
+}
+```
+
+### Hack techniques
+
+:::caution
+Use matching hacks sparingly: they should pretty much only be used as a last resort.
+:::
+
+* Declare a function `[[gnu::noinline]]` to forbid LLVM from inlining it. This is useful when a function is getting inlined when it shouldn't, and you haven't figured out why yet.
+* `__builtin_assume(condition);` tells the LLVM optimiser to assume that `condition` is true. (If it isn't, you get undefined behaviour.) This can usually affect codegen in a drastic manner.
+* `asm("");` prevents LLVM from optimising memory accesses in some situations.
+
+## Library code
+
+Changes to the following libraries must be PR'd/submitted to their own repository:
+
+* sead: https://github.com/open-ead/sead
+* NintendoSDK: https://github.com/open-ead/nnheaders
+* agl: https://github.com/open-ead/agl
+* EventFlow: https://github.com/open-ead/EventFlow
+
+## Resources
+
+### BotW documentation and datamining
+
+These might help with figuring out what a function does, naming and organising source code. If you're not quite sure how source files should be organised, mimicking the RomFS layout (last link) is a good place to start!
+
+* The [ZeldaMods](https://zeldamods.org/wiki/Main_Page) wiki
+* [MrCheeze's botw-tools](https://github.com/MrCheeze/botw-tools)
+* [botw-re-notes](https://github.com/leoetlino/botw-re-notes)
+* [Parameter files, map files, etc.](https://botw.link/rom)
+
+### AArch64
+
+AArch64 is the instruction set architecture (ISA) that is used for Switch builds of BotW.
+
+* AArch64 ISA overview: https://developer.arm.com/documentation/102374/0101 (read this first if you're new to AArch64)
+* ARMv8 A64 Quick Reference: https://courses.cs.washington.edu/courses/cse469/18wi/Materials/arm64.pdf
+* Arm ARMv8 ARM (Architecture Reference Manual): https://developer.arm.com/documentation/ddi0487/latest/ (extremely detailed)
+
+## Need help?
+
+Check out the [cheatsheet](/cheatsheet) or ask for help on the [Zelda Decompilation Discord server](https://discord.zelda64.dev/) in the #botw-decomp-help channel.
+
+If you're not sure what to work on, ask for guidance in #botw-decomp.
+
+### Matching help
+
+You can make it easier for other people to help you match a function by creating a [decomp.me](https://decomp.me/) scratch. This allows people to see your code and experiment with it online.
+
+To create a scratch:
+
+```shell
+tools/decompme -p build -s SOURCE_FILE FUNCTION_NAME
+```
+
+For instance:
+
+```shell
+tools/decompme -p build -s src/KingSystem/Physics/System/physRayCast.cpp RayCast::worldRayCastImpl
+```
+
+For particularly complicated changes or large source files, you may be asked to push your branch to your GitHub fork so that other contributors can play with your code on their local machine.

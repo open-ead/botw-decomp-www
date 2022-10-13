@@ -1,0 +1,84 @@
+# agl
+
+agl is one of Nintendo's in-house graphics libraries.
+
+## Parameter utilities
+
+In *Breath of the Wild*, its parameter utilities are heavily used for the game's configuration files.
+
+### agl::utl::Parameter::init
+
+```cpp
+name.vptr = &sead::SafeString::vt;
+name.cstr = "Item";
+label.vptr = &sead::SafeString::vt;
+label.cstr = "表示距離";
+meta.vptr = &sead::SafeString::vt;
+meta.cstr = (char *)&nullbyte;
+agl::utl::ParameterBase::initializeListNode(
+  &foo._,
+  &name,
+  &label,
+  &meta,
+  bar);
+foo.value = default_value;
+```
+⬇️
+```cpp
+foo.init(default_value, "Item", "表示距離", bar);
+```
+
+
+
+### agl::utl::IParameterObj::applyResParameterObj
+
+```cpp
+agl::utl::IParameterObj::applyResParameterObj_(foo, 0, bar, 0LL, 0.0, 0LL);
+```
+⬇️
+```cpp
+foo.applyResParameterObj(bar);
+```
+
+
+
+### agl::utl::ResParameterArchive::getRootList
+
+```cpp
+agl::utl::ResParameterArchive::ResParameterArchive(&archive, data);
+root.ptr = (agl::utl::ResParameterListData *)((char *)&archive.ptr[1] + (unsigned int)archive.ptr->rootOffsetAfterHeader);
+```
+⬇️
+```cpp
+agl::utl::ResParameterArchive archive{data};
+auto root = archive.getRootList();
+```
+
+
+
+### Getting ResParameterObj or ResParameterList
+
+```cpp
+key.vptr = &sead::SafeString::vt;
+key.cstr = "InvalidWeathers";
+key_hash = agl::utl::ParameterBase::calcHash(&key);
+idx = agl::utl::ResParameterList::searchObjIndex(&foo, key_hash);
+if ( idx == 0xFFFFFFFF )
+{
+  obj = 0LL;
+}
+else
+{
+  obj = (__int64)v30.ptr + 8 * idx + 4 * (unsigned __int16)v30.ptr->objOffsetNum;
+  if ( obj )
+  {
+    bar();
+  }
+}
+```
+⬇️
+```cpp
+const auto obj = agl::utl::getResParameterObj(foo, "InvalidWeathers");
+if (obj.ptr())
+    bar();
+```
