@@ -1,0 +1,113 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+:root {
+  --bg-url: url(https://static.zeldamods.org/assets/bg.png);
+  --botw-white: #ffffd7;
+  --botw-ui-font: Calamity;
+}
+
+@font-face {
+  /* keep this in sync with --botw-ui-font */
+  font-family: Calamity;
+  font-style: italic;
+  src: url("/static/fonts/Calamity-Regular.otf") format("opentype");
+}
+
+@font-face {
+  /* keep this in sync with --botw-ui-font */
+  font-family: Calamity;
+  font-style: italic;
+  font-weight: bold;
+  src: url("/static/fonts/Calamity-Bold.otf") format("opentype");
+}
+
+.font-calamity {
+  font-family: var(--botw-ui-font);
+}
+
+h1,
+h2,
+h4,
+.navbar__title,
+.footer__title {
+  font-family: var(--botw-ui-font);
+}
+
+html[data-theme='dark'] {
+  --ifm-color-primary: #29d1fc;
+  --ifm-color-primary-dark: #0ccbfc;
+  --ifm-color-primary-darker: #03c4f6;
+  --ifm-color-primary-darkest: #03a2ca;
+  --ifm-color-primary-light: #46d7fc;
+  --ifm-color-primary-lighter: #54dafd;
+  --ifm-color-primary-lightest: #80e4fd;
+  background: #1c1f2a;
+}
+
+:where([data-theme='dark']) {
+  --docusaurus-highlighted-code-line-bg: #282828 !important;
+}
+
+/* prevent the logo from showing up twice before rehydration */
+img[class^='themedImage--light'], img[class*=' themedImage--light'] {
+  display: none;
+}
+
+.navbar {
+  background: rgba(53, 55, 56, 0.69) var(--bg-url);
+  background-blend-mode: lighten;
+}
+
+.footer {
+  background: rgba(48, 56, 70, 0.6) var(--bg-url);
+  background-blend-mode: lighten;
+}
+
+.card {
+  background: rgba(53, 55, 56, 0.8) var(--bg-url);
+  background-blend-mode: lighten;
+}
+
+html.container-botw-background {
+  background-image: var(--bg-url);
+  background-attachment: fixed;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+html.container-botw-background .navbar {
+  background: var(--bg-url);
+}
+
+html.container-botw-background .footer {
+  background: rgba(48, 56, 70, 0.5);
+}
+
+.aa-DetachedSearchButtonPlaceholder {
+  display: none;
+}
+
+.markdown>h2 {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ffffff3f;
+}
+
+@media (max-width: 996px) {
+  .searchBox_node_modules-\@docusaurus-theme-classic-lib-theme-Navbar-Search-styles-module {
+    position: relative !important;
+    right: 0 !important;
+  }
+
+  .navbar__logo {
+    display: none;
+  }
+
+  .footer__col:last-child {
+    margin-bottom: 0;
+  }
+}

@@ -1,0 +1,1014 @@
+---
+title: C++ codegen primer
+description: C++ implementation trivia useful for decomp and landing 6-fig jobs
+toc_max_heading_level: 4
+tags:
+  - primer
+---
+
+Here's a bunch of C++ implementation trivia (i.e. information about how C++ code gets compiled) that might be useful when reverse engineering or decompiling C++ code.
+
+This is admittedly a lot of reading, but hopefully by the end you'll no longer be surprised by C++ constructs when REing BotW or another C++ codebase!
+
+:::caution
+This document assumes you are already familiar with C++ &mdash; just not with what C++ code looks like once compiled.
+
+Also, everything mentioned here is compiler and [ABI](https://en.wikipedia.org/wiki/Application_binary_interface)-specific. This document applies to Switch builds of BotW, but probably not to other compilers/ABIs.
+:::
+
+:::note WIP
+This document is a work in progress
+:::
+
+## References
+
+References behave like pointers in the generated code.
+
+```cpp
+void f(int& a) {
+  a = 5;
+}
+```
+
+Codegen:
+
+```cpp
+void f(int* a) {
+  *a = 5;
+}
+```
+
+Because references cannot be null in C++, the optimiser is allowed to assume to optimise away null checks on references. That can occasionally produce codegen differences between references and pointers.
+
+## Classes
+
+Classes and structs are essentially the same thing: the only difference is that members are `private` in classes and `public` in structs (by default). There is absolutely no difference in terms of codegen.
+
+```cpp
+struct Foo {
+  int x;  // public
+};
+
+class Bar {
+  int x;  // private
+public:
+  int y;  // can use access specifiers (e.g. public) to override the default
+};
+```
+
+Where things start to get interesting and different from C is when you add member functions, constructors, destructors, virtual member functions, and inheritance.
+
+### Member functions
+
+Member functions ('methods' in other object-oriented languages such as Java and Python) are functions that are part of a class:
+
+```cpp
+struct Counter {
+  // highlight-start
+  void increment(int n = 1) {
+    x += n;  // equivalent to this->x += n
+  }
+  // highlight-end
+
+  int x = 0;
+};
+```
+
+At the machine code level, Counter::increment gets compiled into something like this:
+
+```cpp
+// note: this is pseudocode, not valid C++
+void Counter__increment(Counter* this, int n) {
+  this->x += n;
+}
+```
+
+:::note Default arguments
+[Default arguments](https://en.cppreference.com/w/cpp/language/default_arguments) of a function do not exist in its compiled code and have no effect on its codegen.
+:::
+
+More generally, member functions get an implicit `this` argument which points to the instance on which the function is called. For BotW, `this` is passed as the first argument (in the X0 register).
+
+Calling a member function (e.g. `counter->increment();`) becomes a regular function call (e.g. `Counter__increment(counter);`).
+
+### Operators
+
+Member functions that are used for operator overloading work the same way.
+
+```cpp
+struct Counter {
+  // highlight-start
+  Counter& operator++() {
+    ++x;
+    return *this;
+  }
+  // highlight-end
+
+  int x = 0;
+};
+```
+
+Unsurprisingly, this gets compiled to:
+
+```cpp
+Counter& Counter__operatorPP(Counter* this) {
+  ++this->x;
+  return *this;
+}
+```
+
+### Constructors
+
+Constructors are slightly more interesting.
+
+A constructor has to initialise every member variable (aka data member), so the compiled code may contain things that do not appear explicitly in the constructor function body!
+
+```cpp
+struct Counter {
+  // highlight-start
+  Counter() {} // or Counter() = default;
+  // highlight-end
+
+  int x;
+  std::string name;
+};
+```
+
+Here we have a constructor with an empty function body. Yet the compiler produces a function that isn't empty:
+
+```cpp
+void Counter__ctor(Counter* this) {
+  std__string__ctor(&this->name);
+}
+```
+
+This is because data members that are not explicitly initialised (using a member initialiser list or a default member initialiser) are default-initialised.
+
+:::caution
+[Default initialisation](https://en.cppreference.com/w/cpp/language/default_initialization) works as follows:
+* If the object that is being default-initialised is of a class type, then the default constructor is called. (This is slightly simplified but holds true in general.)
+* If the object is an array, then every element is default-initialised.
+* Otherwise, the object is left *uninitialised*.
+
+In the previous example:
+* `name` is an std::string, which is a class with a default constructor, so that constructor is called to default-initialise the variable.
+* `x` is also default-initialised, but because it is an int, default-initialisation leaves the int uninitialised.
+:::
+
+#### Implicitly-declared default constructor
+
+In fact, this can happen even if you do not declare a default constructor explicitly in your source code.
+
+:::note
+A constructor that can be called with no arguments (other than `this`) is called a *default constructor*.
+:::
+
+If no user-declared constructors are provided, the compiler implicitly declares a default constructor. If possible, the compiler also implicitly defines it (if it's used).
+
+```cpp
+struct Counter {
+  int x;
+  std::string name;
+};
+```
+
+This produces the same constructor function as previously seen:
+
+```cpp
+void Counter__ctor(Counter* this) {
+  std__string__ctor(&this->name);
+}
+```
+
+#### Function body
+
+What happens then if there's code in the constructor function body?
+
+```cpp
+struct Counter {
+  // highlight-start
+  Counter() {
+    std::println("hello world");
+  }
+  // highlight-end
+  ...
+};
+```
+
+You have three options:
+
+1. C++ throws away your function body and replaces it with the autogenerated member init code.
+2. Your function body is run **before** member variables are initialised.
+3. Your function body is run **after** member variables are initialised.
+
+Let's examine each of those options:
+
+1. :x: C++ is a confusing language with many footguns, but it's not *that* insane.
+2. :x: Running the function body before member variables are initialised would not make sense, because that would make it impossible to access them safely!
+3. :heavy_check_mark: **Running the function body after member variables are initialised** is the only sane thing to do.
+
+So that constructor gets compiled as:
+
+```cpp
+void Counter__ctor(Counter* this) {
+  std__string__ctor(&this->name);
+  std::println("hello world");
+}
+```
+
+#### Member initialiser lists
+
+Now what happens if we use *member initialiser lists*?
+
+```cpp
+struct Counter {
+  Counter()
+  // highlight-start
+    : x{42}, name{"Link"}
+  // highlight-end
+  {
+    std::println("hello world, x = {}", x);
+  }
+
+  int x;
+  std::string name;
+};
+```
+
+No surprise here, the compiler initialises data members as specified in the member initialiser list:
+
+```cpp
+void Counter__ctor(Counter* this) {
+// highlight-start
+  this->x = 42;
+  std__string__ctor(&this->name, "Link");
+// highlight-end
+  std::println("hello world, x = {}", this->x);
+}
+```
+
+:::caution
+Member initialiser lists do not control the initialisation order: data members are **always** initialised in order of declaration in the class definition.
+
+Modern compilers (including the version of Clang we use) will warn you if you forget this.
+:::
+
+Any members that are omitted from the initialiser list are still *default-initialised*:
+
+```cpp
+struct Counter {
+  Counter()
+  // highlight-start
+    : x{42}
+  // highlight-end
+  {
+    std::println("hello world, x = {}", x);
+  }
+
+  int x;
+  std::string name;
+};
+```
+
+```cpp
+void Counter__ctor(Counter* this) {
+  this->x = 42;
+// highlight-start
+  std__string__ctor(&this->name);  // default initialisation
+// highlight-end
+  std::println("hello world, x = {}", this->x);
+}
+```
+
+#### Default member initialisers
+
+C++11 added default member initialisers to make it possible to initialise members in a more concise way:
+
+```cpp
+struct Counter {
+  int x = 42;
+  std::string name = "Link";
+};
+```
+
+This is equivalent to:
+
+```cpp
+struct Counter {
+  Counter() : x{42}, name{"Link"} {}
+
+  int x;
+  std::string name;
+}
+```
+
+In both cases, the generated code looks like this:
+
+```cpp
+void Counter__ctor(Counter* this) {
+// highlight-start
+  this->x = 42;
+  std__string__ctor(&this->name, "Link");
+// highlight-end
+}
+```
+
+:::note
+If a member has a default member initialiser and also appears in the member initialiser list for a constructor, the default initialiser is ignored for that constructor.
+
+```cpp
+struct Test {
+  Test() : x(42) {
+    // x is set to 42, not 0
+  }
+
+  int x = 0;
+};
+```
+:::
+
+
+### Destructors
+
+Destructors are another kind of special member function. Just like constructors, destructors can be implicitly defined and often contain compiler-generated destruction code:
+
+```cpp
+struct Counter {
+  int x = 42;
+  std::string name = "Link";
+  std::string type = "hp";
+};
+```
+```cpp
+void Counter__dtor(Counter* this) {
+  std__string__dtor(&this->type);
+  std__string__dtor(&this->name);
+  // x is also destructed but that doesn't produce any code
+  // because it's just an int
+}
+```
+
+Data members are always destructed in reverse order of initialisation, i.e. in reverse order of declaration.
+
+### Virtual member functions
+
+[Virtual member functions](https://en.cppreference.com/w/cpp/language/virtual) are member functions that can be overridden in derived classes.
+
+In C++, virtual functions are marked with the `virtual` keyword. (In Java and Python, all methods are virtual by default.)
+
+Virtual function calls are more complicated than non-virtual calls: the program must first determine which function should be called according to the dynamic/actual type of the object.
+
+For example:
+
+```cpp
+class Action {
+public:
+  virtual void run(Actor* actor) {
+    // do nothing by default
+  }
+};
+
+class DeleteAction : public Action {
+public:
+  void run(Actor* actor) override {
+    actor->deleteLater();
+  }
+};
+
+void runAction(Action* action, Actor* actor) {
+  action->run(actor);
+}
+```
+
+`action->run(actor);` cannot just be replaced with a call to Action::run (the base function which does nothing): runAction() must call Action::run or DeleteAction::run based on whether `action` points to an Action or a DeleteAction.
+
+At compile time, the compiler has no idea which implementation it's supposed to call (in general). So what could it do?
+
+#### Towards vtables
+
+One possibility is to somehow check the type of `action` and call the appropriate implementation based on the type:
+
+```cpp title="Pseudocode of a potential (but flawed) solution"
+void runAction(Action* action, Actor* actor) {
+  if (__typeof(action) == Action) {
+    Action__run(action, actor);
+  } else if (__typeof(action) == DeleteAction) {
+    DeleteAction__run(action, actor);
+  } else {
+    // default, because action is an Action*
+    Action__run(action, actor);
+  }
+}
+```
+
+However, this obviously does not scale well and does not even work in general because (in the absence of a more sophisticated compilation and optimisation process) the compiler does not necessarily know about every possible subclass of Action when it's compiling runAction.
+
+One solution would be to store a function pointer for `run` inside Action:
+
+```cpp title="Pseudocode"
+struct Action {
+  void (*run)(Action* this, Actor* actor);
+};
+```
+
+...and then to generate code for setting the function pointer in the Action constructor (ditto for DeleteAction):
+
+```cpp title="Pseudocode"
+void Action__ctor(Action* this) {
+  this->run = &Action__run;
+}
+
+void DeleteAction__ctor(DeleteAction* this) {
+  Action__ctor(this);
+  this->run = &DeleteAction__run;
+}
+```
+
+Calling the correct implementation of run() becomes extremely easy: just invoke that function pointer!
+
+```cpp title="Pseudocode"
+void runAction(Action* action, Actor* actor) {
+  action->run(actor);
+}
+```
+
+This works pretty well when you have one virtual function in the class, but suppose Action has 10 different virtual functions. Now every single Action object has to be 8 &times; 10 = 80 bytes larger just to store all those virtual function pointers! That is incredibly wasteful, especially when all instances of a specific type (e.g. DeleteAction) will have the function pointers set to the exact same values.
+
+#### Vtables
+
+:::tip A famous quote
+"All problems in computer science can be solved by another level of indirection."
+:::
+
+Here's the typical solution: instead of storing a bunch of function pointers directly inside the object, those are stored inside a table, called the **virtual function table** (aka **vftable** or **vtable**), and the object stores a single pointer to the vtable instead.
+
+The vtable contains one function pointer per virtual function:
+
+```cpp title="Example source code"
+class Action {
+public:
+  virtual void init(Actor* actor) {}
+  virtual void run(Actor* actor) {}
+  virtual void cleanUp(Actor* actor) {}
+};
+
+class DeleteAction : public Action {
+public:
+  void init(Actor* actor) override { ... }
+  void run(Actor* actor) override { ... }
+};
+
+void runAction(Action* action, Actor* actor) {
+  action->run(actor);
+}
+```
+
+```cpp title="Example codegen"
+struct Action__vtbl {
+  void (*init)(Action* this, Actor* actor);
+  void (*run)(Action* this, Actor* actor);
+  void (*cleanUp)(Action* this, Actor* actor);
+};
+
+struct Action {
+  // Action now only stores a pointer to the vtable
+  Action__vtbl* __vtbl;
+};
+
+// DeleteAction has the same memory layout as Action
+struct DeleteAction : Action {};
+
+constexpr Action__vtbl Action__vtable = {
+  &Action__init,
+  &Action__run,
+  &Action__cleanUp,
+};
+
+constexpr Action__vtbl DeleteAction__vtable = {
+  &DeleteAction__init,
+  &DeleteAction__run,
+  &DeleteAction__cleanUp,
+};
+
+void Action__ctor(Action* this) {
+  this->__vtbl = &Action__vtable;
+}
+
+void DeleteAction__ctor(Action* this) {
+  Action__ctor(this);
+  this->__vtbl = &DeleteAction__vtable;
+}
+```
+
+Calling a virtual function is now slightly more complicated and requires an extra level of indirection. First, the vtable pointer must be loaded from the object, and then the function pointer must be loaded from the vtable before the implementation can be called:
+
+```cpp
+void runAction(Action* action, Actor* actor) {
+  action->__vtbl->run(action, actor);
+}
+```
+
+But this solves all of the problems we had!
+
+:::info
+In reality, the vtable does not just contain function pointers. But conceptually that's all a vtable is!
+:::
+
+#### Devirtualisation
+
+Virtual function calls are not a zero overhead language feature. That is why sufficiently smart compilers (such as Clang) will try to avoid going through the vtable if it can figure the dynamic type of an object at compile-time:
+
+```cpp
+void deleteActor(Actor* actor) {
+  DeleteAction action;
+  action.run(actor);
+}
+```
+
+Here, the compiler knows that the dynamic type of `action` is `DeleteAction` and that `action.run()` will always call DeleteAction::run. So the emitted code just calls the implementation directly &mdash; as if it were a non-virtual member function &mdash; without going through the vtable.
+
+```cpp title="Pseudocode"
+void deleteActor(Actor* actor) {
+  DeleteAction action;
+  DeleteAction__ctor(&action);
+  DeleteAction__run(&action, actor);
+  DeleteAction__dtor(&action);
+}
+```
+
+This optimisation is known as "devirtualisation", and you'll see it in various places (notably in sead::SafeString user code) when reverse engineering Nintendo EPD code.
+
+:::info Bonus: Speculative devirtualisation
+
+Let's go back to the runAction example:
+
+```cpp
+void runAction(Action* action, Actor* actor) {
+  action->run(action, actor);
+}
+```
+
+If the compiler cannot figure out the dynamic type of `action` at compile time *but* can somehow prove that `action` is either Action or DeleteAction, then it can still perform an optimisation called *speculative devirtualisation*:
+
+```cpp
+void runAction(Action* action, Actor* actor) {
+  if (action->__vtbl == &DeleteAction__vtbl)
+    DeleteAction__run(action, actor);
+  else
+    Action__run(action, actor);
+}
+```
+
+This saves one memory access and an indirect jump compared to always going through the vtable.
+
+Speculative devirtualisation is not something Clang 4.0 is capable of doing, but you may notice this optimisation in programs that are compiled with recent versions of GCC.
+
+:::
+
+### Virtual destructors
+
+Just like how destructors are special member functions, virtual destructors *also* get special handling.
+
+Because of various implementation reasons and obscure language features, compilers emit two functions for each virtual destructor:
+
+* A "complete object destructor" (D1)
+* A "deleting destructor" (D0)
+
+D1 and D0 are identical, except that D0 contains a call to a memory deallocation function (e.g. `operator delete`) at the end.
+
+Example:
+
+```cpp title="Example source code"
+struct Action {
+// highlight-start
+  virtual ~Action() = default;
+// highlight-end
+};
+```
+
+```cpp title="Example codegen"
+struct Action__vtbl {
+// highlight-start
+  void (*__dtor_D1)(Action* this); // the complete object dtor (D1)
+  void (*__dtor_D0)(Action* this); // the deleting dtor (D0)
+// highlight-end
+};
+
+struct Action {
+  Action__vtbl* __vtbl;
+};
+
+constexpr Action__vtbl Action__vtable = {
+// highlight-start
+  &Action__dtor_D1,
+  &Action__dtor_D0,
+// highlight-end
+};
+
+void Action__ctor(Action* this) {
+  this->__vtbl = &Action__vtable;
+}
+
+// highlight-start
+void Action__dtor_D1(Action* this) {
+  // nothing
+}
+
+void Action__dtor_D0(Action* this) {
+  // nothing, followed by a deallocation call
+  ::operator delete(this);
+}
+// highlight-end
+```
+
+:::note
+There's also a "base object destructor" (D2), but in the absence of multiple inheritance, D1 and D2 are generally the same function.
+
+You can read more about virtual destructors on the [Itanium C++ ABI documentation](https://itanium-cxx-abi.github.io/cxx-abi/abi.html).
+:::
+
+:::info Refresher: When do you need virtual destructors?
+
+The destructor of a base class `T` should be made virtual whenever you have classes that derive from `T` and you want to `delete` a derived object through a base pointer.
+
+That is quite a complicated formulation, so here's an example:
+
+```cpp
+struct Base {
+  virtual ~Base() = default;
+};
+
+struct Derived : Base {
+  std::string foo;
+};
+
+void destruct(Base* b) {
+  delete b;
+}
+```
+
+`b` might point to a Base, a Derived or another class that derives from Base. If Base's destructor had not been made virtual, then the compiler would have just used `Base::~Base` (Base's destructor) to destruct the object, with horrific consequences if `b` happens to be a Derived, because Derived's destructor would never get called!
+
+:::
+
+### Simple inheritance
+
+This is easiest to understand with a simple example:
+
+```cpp title="Example source code"
+struct Base {
+  int a;
+  int b;
+};
+
+struct Derived : Base {
+  int c;
+};
+```
+
+The struct memory layouts look like this:
+
+* Base (sizeof = 8):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base::a |
+  | 0x4 | Base::b |
+
+* Derived (sizeof = 0xc):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base::a |
+  | 0x4 | Base::b |
+  | 0x8 | Derived::c |
+
+As you'd expect, Derived has Base at offset 0, and Derived's own data members are appended at the end of the Base struct.
+
+#### Tail padding reuse optimisation
+
+Tail padding bytes in a non-[standard-layout](https://timsong-cpp.github.io/cppwp/n4861/class.prop#3) base class can be reused to store data members of a derived class.
+
+```cpp title="Example source code"
+struct Base {
+  void* a;
+private: // class is no longer standard-layout
+  int b;
+};
+
+struct Derived : Base {
+  int c;
+};
+```
+
+The struct memory layouts now look like this:
+
+* Base (sizeof = 0x10):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base::a |
+  | 0x8 | Base::b |
+  | 0xc | 4 bytes of padding |
+
+* Derived (sizeof = 0x10):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base::a |
+  | 0x8 | Base::b |
+  | 0xc | Derived::c |
+
+Notice that sizeof(Derived) == sizeof(Base), despite Derived having an extra int! That's because the 4 bytes of padding in Base were reused to store Derived::c.
+
+#### Empty base optimisation
+
+```cpp title="Example source code"
+struct Base {};
+
+struct Derived : Base {
+  int c;
+};
+```
+
+* Base (sizeof = 0x1 despite Base being an empty class; this is because sizeof cannot be zero)
+
+* Derived (sizeof = 0x4):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Derived::c |
+
+Notice that the base class was completely optimised out from Derived's layout even though sizeof(Base) is 1.
+
+### Multiple inheritance
+
+:::note
+We will not cover virtual inheritance in this article, as it is quite complicated to explain and very rarely used in BotW.
+:::
+
+TODO
+
+### Vtables and inheritance
+
+TODO
+
+#### Vtables and multiple inheritance
+
+TODO
+
+### Vtable emission
+
+TODO
+
+### Pointers-to-member-functions (PTMFs)
+
+TODO
+
+## `new` expressions
+
+New-expressions (e.g. `new T`, `new T(args, ...)`, etc.) do two things:
+
+1. Allocate enough memory for a `T` object
+2. Call the appropriate `T` constructor on the allocated memory to actually construct the object
+
+```cpp title="Example source code"
+Counter* alloc() {
+  return new Counter;
+}
+```
+
+```cpp title="Example codegen"
+Counter* alloc() {
+  // 1. allocate memory to store the object by calling the appropriate allocation function
+  // this is typically ::operator new (which is analogous to C's malloc)
+  auto* __storage =
+    static_cast<Counter*>(::operator new(sizeof(Counter)));
+
+  // 2. call the constructor
+  Counter__ctor(__storage);
+
+  return __storage;
+}
+```
+
+:::info Non-throwing new
+
+`new T` is assumed to either succeed or throw an exception in case of failure. This means that checking whether the result of `new T` is nullptr is useless and the check will get optimised away by the compiler.
+
+If you want a variant of `new` that returns nullptr on allocation failure, use `new (std::nothrow) T` instead.
+:::
+
+## `delete` expressions
+
+Delete-expressions (e.g. `delete ptr`) perform two actions *if the pointer is not null*:
+
+1. Call the destructor on the pointed-to object
+2. Deallocate the memory associated with that object
+
+If the pointer is null, nothing happens.
+
+```cpp title="Example source code"
+void deleteCounter(Counter* counter) {
+  delete counter;
+}
+```
+
+```cpp title="Example codegen"
+void deleteCounter(Counter* counter) {
+  if (counter != nullptr) {
+    // 1. call the destructor
+    Counter__dtor(counter);
+
+    // 2. call the appropriate deallocation function
+    // this is typically ::operator delete (which is analogous to C's free)
+    ::operator delete(counter);
+  }
+}
+```
+
+## `new[]` expressions
+
+New[]-expressions (e.g. `new T[5]`) perform two actions:
+
+1. Allocate enough memory for the specified number of `T` objects
+2. Call the appropriate `T` constructor on each element to actually construct the objects
+
+```cpp title="Example source code"
+Counter* alloc(int n) {
+  return new Counter[n];
+}
+```
+
+```cpp title="Example codegen"
+Counter* alloc(int n) {
+  // 1. allocate memory to store n objects by calling the appropriate allocation function
+  auto* __storage =
+    static_cast<Counter*>(::operator new(sizeof(Counter) * n));
+
+  // 2. call the constructor on each element
+  for (auto* __it = __storage, __end = __storage + n; __it != __end; ++__it)
+    Counter__ctor(__it);
+
+  return __storage;
+}
+```
+
+### Allocating non-trivially destructible objects
+
+If `T` is not [trivially destructible](https://en.cppreference.com/w/cpp/language/destructor#Trivial_destructor), then its destructor needs to be called on every element when the entire array is deleted using `delete[]`.
+
+To do so, the number of elements must be known at delete time. That requirement is satisfied by allocating an additional `sizeof(size_t) = 8` bytes of storage, and by storing the array size at the beginning of the allocation.
+
+```cpp title="Example source code"
+struct Counter {
+// highlight-start
+  // suppose Counter is no longer trivially destructible
+  ~Counter() { ... }
+// highlight-end
+};
+
+Counter* alloc(int n) {
+  return new Counter[n];
+}
+```
+
+```cpp title="Example codegen"
+Counter* alloc(int n) {
+  // 1. allocate memory to store a size_t + n objects by calling the appropriate allocation function
+  auto* __storage = ::operator new(sizeof(size_t) + sizeof(Counter) * n);
+
+  // 2. write the size to the beginning of the storage
+  *(size_t*)__storage = n;
+
+  // 3. call the constructor on each element
+  auto* __begin = (Counter*)((char*)__storage + sizeof(size_t));
+  for (auto* __it = __begin, __end = __begin + n; __it != __end; ++__it)
+    Counter__ctor(__it);
+
+  // note: this returns __begin, *not* __storage!
+  // the size_t thing is hidden from the developer
+  return __begin;
+}
+```
+
+## `delete[]` expressions
+
+Delete[]-expressions (e.g. `delete[] ptr`) perform two actions *if the pointer is not null*:
+
+1. If the elements are not trivially destructible, then the destructor must be called on each element
+2. Deallocate the memory associated with the array
+
+If the pointer is null, then nothing happens.
+
+Assuming that `Counter` *is* trivially destructible:
+
+```cpp title="Example source code"
+void deleteCounters(Counter* counters) {
+  delete[] counters;
+}
+```
+
+```cpp title="Example codegen"
+void deleteCounters(Counter* counters) {
+  if (counters != nullptr) {
+    // 1. no code is emitted for destructing the elements
+    // because by definition, a trivial destructor doesn't do anything
+
+    // 2. call the appropriate deallocation function
+    // this is typically ::operator delete (which is analogous to C's free)
+    ::operator delete(counters);
+  }
+}
+```
+
+Assuming that `Counter` is **not** trivially destructible:
+
+```cpp title="Example source code"
+void deleteCounters(Counter* counters) {
+  delete[] counters;
+}
+```
+
+```cpp title="Example codegen"
+void deleteCounters(Counter* counters) {
+  if (counters != nullptr) {
+    // 1. recover the original allocation pointer
+    void* __storage = (char*)counters - sizeof(size_t));
+
+    // 2. figure out how many elements need to be deleted
+    size_t n = *static_cast<size_t*>(__storage);
+
+    // 3. call the destructor on each element
+    for (auto* __it = counters, end = counters + n; __it != __end; ++__it)
+      Counter__dtor(__it);
+
+    // 4. call the appropriate deallocation function
+    // this is typically ::operator delete (which is analogous to C's free)
+    ::operator delete(__storage);
+  }
+}
+```
+
+:::note
+This latter case (T not being trivially destructible) is why accidentally using `delete` instead of `delete[]` to delete an array that was allocated using `new[]` usually leads to catastrophic failure.
+:::
+
+## placement-new expressions
+
+placement-new is a fancy name for a variant of new-expressions that take custom arguments.
+
+The syntax is as follows: `new (placement-params) type optional-initialiser`
+
+placement-new is a relatively obscure C++ feature but one of the best known usages of placement-new is to construct objects in allocated storage, without allocating any memory:
+
+```cpp title="Example source code"
+void* storage = malloc(sizeof(Counter));
+// highlight-start
+auto* counter = new (storage) Counter;
+// highlight-end
+```
+
+```cpp title="Example codegen"
+void* storage = malloc(sizeof(Counter));
+
+// highlight-start
+void* __storage = ::operator new(sizeof(Counter), storage);
+//                                                ^^^^^^^^
+//               this comes straight from placement-params
+Counter__ctor(__storage);
+auto* counter = static_cast<Counter*>(__storage);
+// highlight-end
+```
+
+Notice that a different overload of `::operator new` is called:
+
+* A regular `new` expression usually calls the `void* operator new(std::size_t n)` overload, which dynamically allocates n bytes of memory
+* In this example, the selected overload is `void* operator new(std::size_t n, void* ptr)`, which simply returns the specified pointer unchanged and doesn't perform any memory allocation.
+
+More generally, any placement-params are passed on to the allocation function as arguments (in addition to the allocation size). This makes it possible to define custom forms of placement-new with custom behaviour, e.g. allocating in a specific memory heap.
+
+:::note
+And that's exactly what modern Nintendo EPD games do!
+
+[sead](https://github.com/open-ead/sead) defines a bunch of custom overloads of `operator new` and `operator new[]` which take in a sead::Heap*:
+
+```cpp title=https://github.com/open-ead/sead/blob/master/include/basis/seadNew.h
+void* operator new(size_t size);
+void* operator new[](size_t size);
+// highlight-start
+...
+void* operator new(size_t size, sead::Heap* heap, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, sead::Heap* heap, const std::nothrow_t&) noexcept;
+
+void* operator new(size_t size, sead::Heap* heap, s32 alignment = sizeof(void*));
+void* operator new[](size_t size, sead::Heap* heap, s32 alignment = sizeof(void*));
+void* operator new(size_t size, sead::Heap* heap, s32 alignment, const std::nothrow_t&) noexcept;
+void* operator new[](size_t size, sead::Heap* heap, s32 alignment, const std::nothrow_t&) noexcept;
+// highlight-end
+```
+
+...which makes it possible to write code like `new (heap) Counter` to allocate objects on a specific sead::Heap.
+
+Side note: sead also replaces the global allocation function (`operator new`) with a custom implementation that better integrates with its heap management system.
+:::

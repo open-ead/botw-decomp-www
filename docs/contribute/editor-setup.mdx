@@ -1,0 +1,36 @@
+---
+title: Editor setup
+description: How to set up your editor/IDE to be more productive
+sidebar_position: 1
+---
+
+The BotW decompilation project is mostly set up like a normal C++ project: we use standard build tools and compilers like Clang, CMake, Ninja, etc. so autocomplete and "IntelliSense" style features should work almost out-of-the-box with little configuration required.
+
+## VSCode
+
+By default, VSCode uses the [C/C++ extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cpptools) to provide language support for C and C++. We recommend using the official [clangd extension](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd) instead as it provides better performance, warnings, hover information and cross references.
+
+### If you want to use clangd (recommended) {#vscode-clangd}
+
+Install the clangd extension. That's it; no extra configuration required.
+
+### If you don't want to use clangd {#vscode-no-clangd}
+
+Make sure you have the C++ and the CMake Tools extensions installed and enabled. And then just answer "yes" when you're asked whether you would like CMake Tools to configure IntelliSense for you.
+
+:::caution Build type
+In certain circumstances, the CMake extension may silently attempt to set the build type to Debug. Make sure the build type is set to RelWithDebInfo (and not Debug) in the status bar; otherwise the entire build will mismatch.
+:::
+
+## CLion
+
+CLion has built-in C++ language support (using clangd), so there is nothing else to install.
+
+However, you need to make sure CLion's build profile is configured correctly to make sure it understands how the project is built.
+
+1. Open the Settings window and go to the Build > CMake pane.
+2. Remove all existing build profiles, and add a new build profile (call it whatever you want):
+    * Build type: RelWithDebInfo
+    * CMake options: `-DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_TOOLCHAIN_FILE=toolchain/ToolchainNX64.cmake -GNinja`
+    * Build directory: `build`
+3. Press OK; CLion will automatically reload the CMake project.
