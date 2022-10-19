@@ -24,6 +24,7 @@ jobs:
         path: build/assets/
         remote_path: build/assets/
         remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_port: ${{ secrets.DEPLOY_PORT }}
         remote_user: ${{ secrets.DEPLOY_USER }}
         remote_key: ${{ secrets.DEPLOY_KEY }}
     - name: deploy new build pages
@@ -33,6 +34,7 @@ jobs:
         path: build/
         remote_path: build/
         remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_port: ${{ secrets.DEPLOY_PORT }}
         remote_user: ${{ secrets.DEPLOY_USER }}
         remote_key: ${{ secrets.DEPLOY_KEY }}
     - name: remove old build assets
@@ -42,5 +44,6 @@ jobs:
         path: build/assets/
         remote_path: build/assets/
         remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_port: ${{ secrets.DEPLOY_PORT }}
         remote_user: ${{ secrets.DEPLOY_USER }}
         remote_key: ${{ secrets.DEPLOY_KEY }}
