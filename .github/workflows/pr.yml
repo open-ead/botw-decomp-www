@@ -1,8 +1,8 @@
-name: deploy
+name: pr
 on: pull_request
 
 jobs:
-  deploy:
+  pr:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
