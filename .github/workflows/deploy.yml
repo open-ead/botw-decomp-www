@@ -1,0 +1,42 @@
+name: deploy
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: npm install
+    - name: build
+      run: npm run build
+    - name: deploy new build assets
+      uses: burnett01/rsync-deployments@5.2.1
+      with:
+        switches: -avzr
+        path: build/assets/
+        remote_path: build/assets/
+        remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_user: ${{ secrets.DEPLOY_USER }}
+        remote_key: ${{ secrets.DEPLOY_KEY }}
+    - name: deploy new build pages
+      uses: burnett01/rsync-deployments@5.2.1
+      with:
+        switches: -avzr
+        path: build/
+        remote_path: build/
+        remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_user: ${{ secrets.DEPLOY_USER }}
+        remote_key: ${{ secrets.DEPLOY_KEY }}
+    - name: remove old build assets
+      uses: burnett01/rsync-deployments@5.2.1
+      with:
+        switches: -av --delete
+        path: build/assets/
+        remote_path: build/assets/
+        remote_host: ${{ secrets.DEPLOY_HOST }}
+        remote_user: ${{ secrets.DEPLOY_USER }}
+        remote_key: ${{ secrets.DEPLOY_KEY }}
