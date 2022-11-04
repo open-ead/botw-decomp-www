@@ -16,6 +16,7 @@ const config = {
   trailingSlash: false,
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
+  baseUrlIssueBanner: false,
 
   plugins: [require.resolve('@cmfcmf/docusaurus-search-local')],
 
