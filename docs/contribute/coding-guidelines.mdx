@@ -33,6 +33,8 @@ The most important rule: look around and follow the existing code style (formatt
     * :heavy_check_mark: `if ((foo && bar) || (x && y))`
     * :x: `if (foo && bar || x && y)`
         <br /> While parentheses are technically useless here, most people do not know their operator precedence for && and || by heart, so it's better to just add parens to make it clear what is being meant.
+* Avoid `using namespace` at namespace/global scope.
+* Declare variables close to their usage point: C89 style declarations are an unnecessary antipattern in any modern language and discouraged.
 
 ### Header files
 
