@@ -1,0 +1,41 @@
+---
+title: Keeping up to date
+description: How to keep up to date with the latest project changes
+sidebar_position: 2
+---
+
+This page explains how to keep up to date with the latest project changes.
+
+## Repository
+
+To update your copy of the repository to the latest revision, run the following command at the root of the repository:
+
+```shell
+git pull --rebase origin master
+```
+
+Occasionally (or if you're updating project tools) you'll also need to update the submodules:
+
+```shell
+git submodule update --init --recursive
+```
+
+## Project tools
+
+Update the repository, then run the following command to update project tools such as the match checker (`tools/check`) and the decomp.me uploader (`tools/decompme`):
+
+```shell
+tools/setup.py
+```
+
+In some cases you may need to update your Rust toolchain before you can rebuild tools. If you're using `rustup`, this can be done by running `rustup update`.
+
+## IDA database or Ghidra project {#ida-database}
+
+Newly added function names and type definitions can be imported into an existing IDA database or Ghidra project by updating the repository and then [following the instructions here](/contribute/decompiler-setup#import).
+
+Note that there is currently no automated tooling to import only the types that have changed.
+
+## Need help?
+
+Ask for help on the [Zelda Decompilation Discord server](https://discord.zelda64.dev/) in the #botw-decomp channel.
