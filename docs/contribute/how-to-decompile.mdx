@@ -171,13 +171,29 @@ You can make it easier for other people to help you match a function by creating
 To create a scratch:
 
 ```shell
-tools/decompme -p build -s SOURCE_FILE FUNCTION_NAME
+tools/decompme FUNCTION_NAME
 ```
 
 For instance:
 
 ```shell
-tools/decompme -p build -s src/KingSystem/Physics/System/physRayCast.cpp RayCast::worldRayCastImpl
+tools/decompme RayCast::worldRayCastImpl
 ```
 
 For particularly complicated changes or large source files, you may be asked to push your branch to your GitHub fork so that other contributors can play with your code on their local machine.
+
+:::note Custom build directory
+If your build directory isn't called `build`, you will need to specify it manually with the `-p` option:
+
+```shell
+tools/decompme -p build/nx64-release/ RayCast::worldRayCastImpl
+```
+:::
+
+:::note Source file path
+If the tool fails to figure out which source file should be uploaded, you must specify a file with the `-s` option:
+
+```shell
+tools/decompme -s src/KingSystem/Physics/System/physRayCast.cpp RayCast::worldRayCastImpl
+```
+:::
