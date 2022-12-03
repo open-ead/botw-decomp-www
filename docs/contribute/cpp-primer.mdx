@@ -651,9 +651,11 @@ void destruct(Base* b) {
 
 :::
 
-### Simple inheritance
+### Inheritance
 
-This is easiest to understand with a simple example:
+In simple cases of inheritance (inheriting from a single base class without any virtual functions), the memory layout of the derived class is the same as that of the base class but with the data members of the derived class appended at the end.
+
+This ensures that a pointer to the derived class can be treated as a pointer to the base class.
 
 ```cpp title="Example source code"
 struct Base {
@@ -683,7 +685,15 @@ The struct memory layouts look like this:
   | 0x4 | Base::b |
   | 0x8 | Derived::c |
 
-As you'd expect, Derived has Base at offset 0, and Derived's own data members are appended at the end of the Base struct.
+#### Multiple inheritance
+
+In C++, it is also possible to inherit from more than one base class. This is called multiple inheritance (as opposed to single inheritance).
+
+Assuming that there are no virtual functions, then the memory layout of a class that inherits from B1, B2, ..., Bn, is the same as that of B1, followed by B2's data members, ..., followed by Bn's data members, followed by the data members of the derived class.
+
+:::note
+We will not cover virtual inheritance in this article, as it is quite complicated to explain and very rarely used in BotW.
+:::
 
 #### Tail padding reuse optimisation
 
@@ -723,6 +733,8 @@ Notice that sizeof(Derived) == sizeof(Base), despite Derived having an extra int
 
 #### Empty base optimisation
 
+The C++ standard guarantees that empty base classes do not take up any space in the layout of derived classes.
+
 ```cpp title="Example source code"
 struct Base {};
 
@@ -741,21 +753,100 @@ struct Derived : Base {
 
 Notice that the base class was completely optimised out from Derived's layout even though sizeof(Base) is 1.
 
-### Multiple inheritance
-
-:::note
-We will not cover virtual inheritance in this article, as it is quite complicated to explain and very rarely used in BotW.
-:::
-
-TODO
-
 ### Vtables and inheritance
 
-TODO
+Inheriting from dynamic classes (i.e. classes with virtual functions) mostly works the same as regular inheritance, except for the vtable of the primary base and of the derived class.
 
-#### Vtables and multiple inheritance
+The *primary base* of a class is its first direct base class. For instance, if a class inherits from B1, B2, B3 (in this order), and B1 itself inherits from C1, then the primary base is B1 (not C1).
 
-TODO
+The derived class does not have its own vtable pointer; rather, the vtable pointer of the primary base points to the derived class' vtable. Because that pointer serves a dual purpose (it is the vtable pointer for both the primary base and the derived class), the derived class' vtable begins with the primary base's vtable, followed by pointers to virtual functions *that are not part of the primary base*.
+
+Example:
+
+```cpp title="Example source code"
+struct Base {
+  virtual void f();
+
+  int a;
+  int b;
+};
+
+struct Base2 {
+  virtual void h();
+
+  int d;
+};
+
+struct Derived : Base, Base2 {
+  virtual void g();
+
+  int c;
+};
+```
+
+`Base` is the primary base as it is the first direct base class of `Derived`. The struct memory layouts look like this:
+
+* Base (sizeof = 0x10):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base vtable pointer |
+  | 0x8 | Base::a |
+  | 0xc | Base::b |
+
+* Base2 (sizeof = 0x10):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base2 vtable pointer |
+  | 0x8 | Base2::d |
+
+* Derived (sizeof = 0x20):
+
+  | Offset | Description |
+  | - | - |
+  | 0x0 | Base & Derived vtable pointer |
+  | 0x8 | Base::a |
+  | 0xc | Base::b |
+  | 0x10 | Base2 vtable pointer |
+  | 0x18 | Base2::d |
+  | 0x1c | Derived::c |
+
+Notice how the layout of `Derived` starts the same way as `Base`, and that the vtable pointer of `Derived` is stored in the same location as the vtable pointer of `Base` (which is the primary base).
+
+The vtables look like this:
+
+* Base:
+
+  | Index | Description |
+  | - | - |
+  | 0 | Offset to top class (0) |
+  | 1 | RTTI for Base |
+  | 2 | Base::f() |
+
+* Base2:
+
+  | Index | Description |
+  | - | - |
+  | 0 | Offset to top class (0) |
+  | 1 | RTTI for Base2 |
+  | 2 | Base2::h() |
+
+* Derived:
+
+  | Index | Description |
+  | - | - |
+  | 0 | Offset to top class (0) |
+  | 1 | RTTI for Derived |
+  | 2 | Base::f() |
+  | 3 | Derived::g() |
+  | 4 | Offset to top class (-0x10) |
+  | 5 | RTTI for Derived |
+  | 6 | Base2::h() |
+
+* The vtable pointer in `Derived`'s `Base` subobject points to index 2 of the `Derived` vtable. The "offset to top" is 0, because `Base` is at offset 0 in `Derived`, so going from a pointer to the `Base` subobject to the `Derived` top-level class does not require any pointer adjustment.
+
+* The vtable pointer in `Derived`'s `Base2` subobject points to index 6 of the `Derived` vtable. The "offset to top" is -0x10, because `Base2` is at offset 0x10 in `Derived`, so going from a pointer to the `Base2` subobject to the `Derived` top-level class requires adjusting the pointer by -0x10 bytes.
 
 ### Vtable emission
 
