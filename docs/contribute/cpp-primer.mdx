@@ -850,11 +850,44 @@ The vtables look like this:
 
 ### Vtable emission
 
-TODO
+The *key function* of a class is its first non-pure, non-inline, virtual function.
+
+If a class has a key function, then its vtable(s) and inline virtual functions are only emitted in the translation unit that defines the key function.
+
+Otherwise, the compiler will emit the vtable(s) and inline virtual functions in every translation unit that uses the class, and then the linker will deduplicate any copies. That is why it is possible for library virtual functions to end up in the middle of BotW code!
 
 ### Pointers-to-member-functions (PTMFs)
 
-TODO
+Contrary to what their name suggests, pointers-to-member-functions are actually *not* pointers. They are represented as structs instead:
+
+```cpp
+struct {
+    uintptr_t func;
+    ptrdiff_t adjustment;
+};
+```
+
+* `adjustment` is the offset (in bytes) that must be added to the `this` pointer before calling the member function, left-shifted by one. The LSB indicates whether the function is virtual.
+
+* `func`:
+  * For a non-virtual member function, `func` is just a normal function pointer.
+  * For a virtual member function, `func` is the offset (in bytes) of the function's entry in the vtable.
+
+Invoking a PTMF therefore produces a very distinctive code pattern that looks like this:
+
+```cpp
+if (ptmf.adjustment & 1 || ptmf.func) {
+  // adjust this
+  this = this + (ptmf.adjustment >> 1);
+
+  // if this is a virtual function, load the function pointer from the vtable
+  if (adjustment & 1)
+    func = *this + ptmf.func;
+
+  // actually invoke the function
+  func(this, ...);
+}
+```
 
 ## `new` expressions
 
