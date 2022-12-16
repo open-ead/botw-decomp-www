@@ -272,6 +272,8 @@ if ( v15 )
 buffer->allocBufferAssert(num_tables, heap);
 ```
 
+Notice how the object count is stored in the first 8 bytes of the allocation: this is because in this specific example, [the allocated objects are not trivially destructible](/contribute/cpp-primer#allocating-non-trivially-destructible-objects).
+
 Another code pattern with a multiplication that looks different:
 
 ```cpp
