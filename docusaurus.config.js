@@ -76,7 +76,7 @@ const config = {
           {
             href: REPO_URL,
             label: 'GitHub',
-            position: 'right',
+            position: 'left',
           },
           {
             type: 'search',
