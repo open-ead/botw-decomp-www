@@ -1,7 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-} from 'react';
+import React from 'react';
 
 import clsx from 'clsx';
 
@@ -23,17 +20,8 @@ function Block({ title, children }) {
 }
 
 export default function Index() {
-  const [progressText, setProgressText] = useState("??.???%");
-
+  const progressText = progressUtils.useCurrentProgressText();
   const ctx = useDocusaurusContext();
-
-  useEffect(() => {
-    async function load() {
-      setProgressText(await progressUtils.getCurrentProgressText());
-    }
-
-    load();
-  }, []);
 
   return (
     <Layout description={ctx.siteConfig.tagline}>
@@ -43,7 +31,9 @@ export default function Index() {
       <header className={styles.heroBanner}>
         <div className="container">
           <h2 className="hero__title" title="Current decompilation progress">
-            <Link to="/progress">{progressText}</Link>
+            <Link to="/progress">
+              {progressText.data || "??.???%"}
+            </Link>
           </h2>
           <div className="row">
             <Block title="What is this?">

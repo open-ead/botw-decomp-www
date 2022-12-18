@@ -1,3 +1,5 @@
+import useSWR from 'swr';
+
 export type Counts = {
   /// Number of functions.
   count: number,
@@ -72,4 +74,8 @@ export async function loadEntries(): Promise<Entry[]> {
 export async function getCurrentProgressText(): Promise<string> {
   const res = await fetch(CURRENT_PROGRESS_JSON_PATH).then(res => res.json());
   return res.message;
+}
+
+export function useCurrentProgressText() {
+  return useSWR("*progressText", getCurrentProgressText);
 }
