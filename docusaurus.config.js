@@ -4,7 +4,7 @@
 const darkCodeTheme = require('prism-react-renderer/themes/vsDark');
 
 const REPO_URL = 'https://github.com/zeldaret/botw';
-const DISCORD_URL = 'https://discord.zelda64.dev';
+const DISCORD_URL = 'https://discord.zelda.deco.mp';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -99,7 +99,7 @@ const config = {
             items: [
               {
                 label: 'ZeldaRET',
-                href: 'https://zelda64.dev',
+                href: 'https://zelda.deco.mp',
               },
               {
                 label: 'Zelda Decompilation Discord',
