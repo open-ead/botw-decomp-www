@@ -13,7 +13,7 @@ A decompiler is a program that translates assembly code into pseudocode (somethi
 Pseudocode is much faster to read than assembly and can be made even more readable with some effort, so we highly recommend using a decompiler such as Hex-Rays or Ghidra.
 
 As of 2022, IDA/Hex-Rays is still ahead of competing tools for heavy analysis of large C++ AArch64 binaries,
-so we recommend acquiring a copy of IDA Pro 7.6+ if you want to contribute to this project. Having IDA will also let you use the project IDA database which simplifies the setup process.
+so we recommend acquiring a copy of IDA Pro 7.6+ if you want to contribute to this project.
 
 ## IDA (recommended) {#ida}
 
@@ -22,9 +22,17 @@ so we recommend acquiring a copy of IDA Pro 7.6+ if you want to contribute to th
 - [LazyIDA](https://gist.github.com/leoetlino/bdac084a1fb0342b734faecf3ae49df9) to copy function addresses with a single key press (W)
 - [HexRaysPyTools](https://github.com/leoetlino/HexRaysPyTools) for automatic reconstruction of structs and other useful features in the decompiler view
 
-### Loading the database {#ida-loading}
+### Loading the executable into IDA {#ida-loading}
 
-If you have IDA 7.6+, ping a BotW project lead on the Zelda Decompilation Discord to get a copy of the IDA database (IDB) which will make decompilation easier and help with understanding the code.
+1. Install the [NSO loader](https://github.com/TSRBerry/nxo64).
+2. Open the 1.5.0 NSO. If you've run the setup script (as mentioned in the [installation guide](installation)), a copy of the NSO is stored at `data/main.nso`.
+3. Wait for IDA to finish its initial auto-analysis. This can take a long time -- go grab a coffee or watch an Any% run in the meantime!
+4. Run the `tools/common/rename_functions_in_ida.py` script in IDA to import function names from this project.
+
+:::caution WIP
+We are currently revamping the way type information (e.g. structs and function types) can be imported into an IDA database and how to keep it up-to-date with the project codebase.
+See [uking-extract](https://github.com/Pistonight/symbotw/tree/main/packages/uking-extract) for more informaton.
+:::
 
 ### Usage {#ida-usage}
 
@@ -83,6 +91,11 @@ This can be done as often as necessary, and this is how you will be keeping your
 
 * Importing function names: Run the `tools/common/rename_functions_in_ida.py` script (File > Script file...).
 * Importing types into the IDB: You can use [classgen](https://github.com/leoetlino/classgen) ([binary builds are available here](https://github.com/leoetlino/classgen/releases/latest)) or IDA Pro 7.7's Clang-based header parser (less convenient).
+
+:::caution WIP
+We are currently revamping the way type information (e.g. structs and function types) can be imported into an IDA database and how to keep it up-to-date with the project codebase.
+See [uking-extract](https://github.com/Pistonight/symbotw/tree/main/packages/uking-extract) for more informaton.
+:::
 
 :::caution WSL users
 If your repo is inside WSL and you're using IDA natively (outside of WSL), you must install the Python dependencies (that were mentioned in the [installation guide](installation#set-up-dependencies)) on the Windows side as well.
