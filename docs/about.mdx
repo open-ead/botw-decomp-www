@@ -128,6 +128,16 @@ We are decompiling the Switch 1.5.0 version because working with Clang is much n
 
 Cross-referencing code with the Wii U 1.5.0 build has proven to be useful on occasion though, because GHS often optimises and inlines differently, and that can help reveal the existence of inline functions.
 
+### Why not decompile the latest version (1.8.1)?
+
+1.8.1 is the latest version of the game as of 12 June 2025.
+
+While 1.8.0 and 1.8.1 don't have the extreme code bloat caused by LTO, they are compiled with profile-guided optimisation (PGO) which makes matching decompilation somewhat tricky.
+
+Porting knowledge across from 1.5.0 to the newer versions is also nontrivial because they were compiled with a newer version of Clang and with different optimisations which render automated diffing/symbol matching tools basically useless.
+
+Nevertheless, 1.8.x are still useful references for reverse engineering and decompiling 1.5.0 because the different optimisation choices made by the newer compiler and different inlining (or lack thereof) can provide useful insight.
+
 ### Why not decompile 1.6.0?
 
 Because of aggressive compiler optimisations and severe code bloat, 1.6.0 is extremely painful to reverse engineer, let alone decompile. [See here](https://gist.github.com/leoetlino/3156c286c7232c2e73b9b74b91021353) for a comparison between 1.5.0 and 1.6.0 code of the main function (called `nnMain`).
@@ -160,9 +170,15 @@ Getting perfect matches on the first try happens pretty often, even for medium-s
 
 Most functions tend to call several other inline functions, notably utility functions from Nintendo's standard library (sead). As many core sead modules have already been reimplemented, decompiling a function sometimes only requires recognising those function calls. We are basically abstracting decompilation away!
 
-### I only have 1.6.0. Can I still contribute?
+### I only have 1.8.1. Can I still contribute?
 
-Yes! You can contribute if you dump the 1.5.0 *or* 1.6.0 executable from your Switch.
+Yes! You can contribute if you dump the 1.5.0 *or* 1.8.1 executable from your Switch.
+
+1.8.1 is the latest version of the game as of 12 June 2025. We strive to make contributing possible for anyone who can dump either 1.5.0 or the latest version from their Switch.
+
+### I only have 1.6.0 or another version that isn't 1.5.0. What should I do?
+
+You should update the game on your Switch to the latest available version first, and then dump it as usual.
 
 ### Do I need to be a game dev or a C++ expert to contribute?
 
