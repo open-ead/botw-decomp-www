@@ -128,9 +128,9 @@ We are decompiling the Switch 1.5.0 version because working with Clang is much n
 
 Cross-referencing code with the Wii U 1.5.0 build has proven to be useful on occasion though, because GHS often optimises and inlines differently, and that can help reveal the existence of inline functions.
 
-### Why not decompile the latest version (1.8.1)?
+### Why not decompile the latest version?
 
-1.8.1 is the latest version of the game as of 12 June 2025.
+1.9.0 is the latest version of the game as of 18 February 2026.
 
 While 1.8.0 and 1.8.1 don't have the extreme code bloat caused by LTO, they are compiled with profile-guided optimisation (PGO) which makes matching decompilation somewhat tricky.
 
@@ -170,11 +170,11 @@ Getting perfect matches on the first try happens pretty often, even for medium-s
 
 Most functions tend to call several other inline functions, notably utility functions from Nintendo's standard library (sead). As many core sead modules have already been reimplemented, decompiling a function sometimes only requires recognising those function calls. We are basically abstracting decompilation away!
 
-### I only have 1.8.1. Can I still contribute?
+### I only have 1.9.0. Can I still contribute?
 
-Yes! You can contribute if you dump the 1.5.0 *or* 1.8.1 executable from your Switch.
+Yes! You can contribute if you dump the 1.5.0 *or* 1.9.0 executable from your Switch.
 
-1.8.1 is the latest version of the game as of 12 June 2025. We strive to make contributing possible for anyone who can dump either 1.5.0 or the latest version from their Switch.
+1.9.0 is the latest version of the game as of 18 February 2026. We strive to make contributing possible for anyone who can dump either 1.5.0 or the latest version from their Switch.
 
 ### I only have 1.6.0 or another version that isn't 1.5.0. What should I do?
 
