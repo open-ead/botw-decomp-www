@@ -103,10 +103,14 @@ If your repo is inside WSL and you're using IDA natively (outside of WSL), you m
 
 ### Ghidra {#import-ghidra}
 
+* After compilation, import `build/uking` into Ghidra
+  * Analyze `uking`, making sure `DWARF` is turned on (this will generate the C++ "classes" for Ghidra)
+* Copy and Paste (or drag and drop) the newly created DWARF folder from `uking`'s Data Type Manager into `main.nso`'s Data Type Manager / Data Types / main.nso
 * Importing function names: Run the script in `tools/common/ghidra_scripts` to import function names.
+* Analyze `main.nso`
 
 :::caution Importing types
-There is currently no way to import types from C++ source code into Ghidra.
+There is currently no way to directly import types from C++ source code into Ghidra.
 :::
 
 ## Need help with setup?
