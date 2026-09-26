@@ -15,6 +15,11 @@ Pseudocode is much faster to read than assembly and can be made even more readab
 As of 2022, IDA/Hex-Rays is still ahead of competing tools for heavy analysis of large C++ AArch64 binaries,
 so we recommend acquiring a copy of IDA Pro 7.6+ if you want to contribute to this project.
 
+:::caution WIP
+We are looking at using Ghidra to replace IDA as the recommended tool as part of the decompilation database tooling revamp. 
+See [here](https://github.com/Pistonight/dejj) for more informaton.
+:::
+
 ## IDA (recommended) {#ida}
 
 ### Useful plugins {#ida-plugins}
@@ -30,8 +35,9 @@ so we recommend acquiring a copy of IDA Pro 7.6+ if you want to contribute to th
 4. Run the `tools/common/rename_functions_in_ida.py` script in IDA to import function names from this project.
 
 :::caution WIP
-We are currently revamping the way type information (e.g. structs and function types) can be imported into an IDA database and how to keep it up-to-date with the project codebase.
-See [uking-extract](https://github.com/Pistonight/symbotw/tree/main/packages/uking-extract) for more informaton.
+We are currently revamping the way type information (e.g. structs and function types)
+can be imported into a decompilation database and how to keep it up-to-date with the project codebase.
+See [here](https://github.com/Pistonight/dejj) for more informaton.
 :::
 
 ### Usage {#ida-usage}
@@ -72,6 +78,11 @@ Alternative: write your C++ type definitions in a header file and then [import](
 [Ghidra](https://ghidra-sre.org/) is an open-source software reverse engineering tool developed by the NSA.
 If you cannot or do not want to use IDA, Ghidra is a decent alternative (though less ideal than IDA for RE'ing something like BotW).
 
+:::caution WIP
+We are looking at using Ghidra to replace IDA as the recommended tool as part of the decompilation database tooling revamp. 
+See [here](https://github.com/Pistonight/dejj) for more informaton.
+:::
+
 Note that you will need to import names and types manually and you will not be able to make use of the existing IDA reverse engineering database if you use Ghidra, so this is really not the recommended option.
 
 ### Loading the executable {#ghidra-load}
@@ -93,8 +104,9 @@ This can be done as often as necessary, and this is how you will be keeping your
 * Importing types into the IDB: You can use [classgen](https://github.com/leoetlino/classgen) ([binary builds are available here](https://github.com/leoetlino/classgen/releases/latest)) or IDA Pro 7.7's Clang-based header parser (less convenient).
 
 :::caution WIP
-We are currently revamping the way type information (e.g. structs and function types) can be imported into an IDA database and how to keep it up-to-date with the project codebase.
-See [uking-extract](https://github.com/Pistonight/symbotw/tree/main/packages/uking-extract) for more informaton.
+We are currently revamping the way type information (e.g. structs and function types)
+can be imported into a decompilation database and how to keep it up-to-date with the project codebase.
+See [here](https://github.com/Pistonight/dejj) for more informaton.
 :::
 
 :::caution WSL users
