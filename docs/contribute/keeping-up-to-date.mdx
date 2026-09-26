@@ -8,33 +8,43 @@ This page explains how to keep up to date with the latest project changes.
 
 ## Repository
 
-To update your copy of the repository to the latest revision, run the following command at the root of the repository:
+To setup your fork to receive new updates from the upstream repository,
+create a new remote pointing to the upstream repository:
 
 ```shell
-git pull --rebase origin master
+git remote add upstream https://github.com/zeldaret/botw
 ```
 
-Occasionally (or if you're updating project tools) you'll also need to update the submodules:
+It's recommended to have your `main` or `master` branch track
+the upstream `master`, and work on changes on your other branches. This way
+you can always cleanly fast-forward your `main` or `master` to the newer
+version of `master` on the upstream repository with the following command:
 
 ```shell
+# ensure you are on your default branch: main or master
+git fetch upstream master
+git merge upstream/master --ff-only
+git push
+
+# also update the submodules and re-run setup to update the tools
 git submodule update --init --recursive
-```
-
-## Project tools
-
-Update the repository, then run the following command to update project tools such as the match checker (`tools/check`) and the decomp.me uploader (`tools/decompme`):
-
-```shell
 tools/setup.py
 ```
 
-In some cases you may need to update your Rust toolchain before you can rebuild tools. If you're using `rustup`, this can be done by running `rustup update`.
+In some cases you may need to update your Rust toolchain before you can rebuild tools.
+If you're using `rustup`, this can be done by running `rustup update`.
 
 ## IDA database or Ghidra project {#ida-database}
 
 Newly added function names and type definitions can be imported into an existing IDA database or Ghidra project by updating the repository and then [following the instructions here](/contribute/decompiler-setup#import).
 
 Note that there is currently no automated tooling to import only the types that have changed.
+
+:::caution WIP
+We are currently revamping the way type information (e.g. structs and function types)
+can be imported into a decompilation database and how to keep it up-to-date with the project codebase.
+See [here](https://github.com/Pistonight/dejj) for more informaton.
+:::
 
 ## Need help?
 
