@@ -10,37 +10,37 @@ Follow these steps to set up the project.
 
 You'll need to install the following programming tools:
 
-* Python 3.6 or newer with [pip](https://pip.pypa.io/en/stable/installation/)
 * Ninja
-* CMake 3.15+
-    * If you are on Ubuntu 18.04, you must first [update CMake by using the official CMake APT repository](https://apt.kitware.com/).
+* CMake 3.30+
 * ccache (to speed up builds)
-* xdelta3
+* xdelta3 (only needed if you have a version of BOTW newer than 1.5.0)
 * Clang (not for compiling BotW code, but for compiling Rust tools)
 
 :::info
 Ubuntu users can install those dependencies by running:
 
 ```shell
-sudo apt install python3 ninja-build cmake ccache xdelta3 clang libssl-dev pkg-config
+sudo apt install ninja-build cmake ccache xdelta3 clang libssl-dev pkg-config
 ```
 :::
 
 Additionally, you'll also need:
 
 * A Rust toolchain ([follow the instructions here](https://rustup.rs))
+* [UV](https://docs.astral.sh/uv/getting-started/installation/) for running python tools.
 
 ## Dump the executable from a Switch
 
-Next, you'll need to acquire the **original 1.5.0 or 1.9.0 `main` NSO executable**.
+Next, you'll need to acquire the **original 1.5.0 or latest `main` NSO executable**.
 
 * To dump it from a Switch, follow [the instructions on the wiki](https://zeldamods.org/wiki/Help:Dumping_games#Dumping_binaries_.28executable_files.29).
-* You do not need to dump the entire game (RomFS + ExeFS + DLC). Just dumping the 1.5.0 or 1.9.0 ExeFS is sufficient.
+* You do not need to dump the entire game (RomFS + ExeFS + DLC). Just dumping the ExeFS is sufficient.
 * The compressed 1.5.0 NSO has the following SHA256 hash: `898dc199301f7c419be5144bb5cb27e2fc346e22b27345ba3fb40c0060c2baf8`
 
 ## Set up the repo
 
 1. Clone this repository. If you are using WSL, please clone the repo *inside* WSL, *not* on the Windows side (for performance reasons).
+   If you plan to contribute, create a fork on GitHub and clone your fork instead (replace `zeldaret` with your username).
 
   ```shell
   git clone git@github.com:zeldaret/botw
@@ -51,7 +51,6 @@ Next, you'll need to acquire the **original 1.5.0 or 1.9.0 `main` NSO executable
 
 3. Run `tools/setup.py [path to the dumped 'main' file]`
     * This will:
-        * setup a virtual python environment (with the built-in `venv` module) and install the necessary python dependencies
         * install a check tool (`tools/check`) to check for differences in decompiled code
         * convert the executable if necessary
         * set up [Clang 4.0.1](https://releases.llvm.org/download.html#4.0.1) by downloading it from the official LLVM website
