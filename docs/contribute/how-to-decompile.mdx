@@ -8,13 +8,20 @@ This is a step-by-step guide to decompiling. Don't worry if you are not quite su
 
 If you are new to the project, we recommend that you read this entire document and any other explanatory docs (e.g. [primers](/tags/primer)) you think might be useful *before* you start decompiling.
 
+:::info Current focus
+Maintainer time is limited, so the project currently focuses on reverse engineering unknown subsystems and components rather than matching trivial functions.
+
+* Only reimplement a component once it has been researched: the component itself should be named, as well as most of its fields. Names confirmed by testing in the game are even better.
+* Do not reimplement a component that has not been researched, even if matching code would be trivial to produce.
+* If your change is substantial (e.g. decompiling several or large components, or touching many files), please ask on [Discord](#need-help) first to confirm the change is wanted.
+:::
+
 ## Process
 
 0. Run `tools/check` to make sure the project is set up correctly. You should see `OK` at the end.
 
 1. **Pick a function that you want to decompile.**
-    * Prefer choosing a function that you understand or that is already named in your IDA/Ghidra database.
-    * You do not need to fully understand the function, but you should at least have a rough idea of what it does.
+    * Pick a function whose component you have researched (see the note above). You should have a good idea of what the function does.
     * If you are feeling more ambitious, pick an entire C++ class! This usually allows understanding the code better.
     * Use our [Trello project board](https://botw.link/trello) to figure out what needs to be decompiled. Make sure it's not already being worked on by somebody else!
         * "<span style={{ color: '#42f508' }}>Easy</span>" tasks are useful to familiarise yourself with the decomp process. Those tasks can typically be done pretty quickly.
@@ -40,7 +47,7 @@ If you are new to the project, we recommend that you read this entire document a
         * Be careful with float comparisons. Because of float semantics, `if (x < y) f(); else g();` and `if (x >= y) g(); else f();` are **not** functionally equivalent (because they behave differently if one of the floats is NaN).
 
     * Things that you can change in your reimplemented version:
-        * _Names_. Some of the function/variable names are just placeholders, so feel free to use your own names if you think they are better.
+        * _Names_. Some of the function/variable names are just placeholders, so feel free to use your own names if you think they are better. Use names that are consistent with the surrounding code.
         * _Functions_. You are free to split a function into several smaller functions or introduce utility functions, even if there isn't an explicit function call in the original code, as long as your reimplemented functions are getting inlined.
             * Note that LLVM will usually not inline functions if they are too large.
         * `if (x) f(); else g();` and `if (!x) g(); else f();` generally produce the same code. Use [early exits](https://llvm.org/docs/CodingStandards.html#use-early-exits-and-continue-to-simplify-code) when possible.
@@ -48,6 +55,7 @@ If you are new to the project, we recommend that you read this entire document a
     * Keep in mind that decompilers can only produce C pseudocode. Some function calls may be C++ member function calls.
     * Identify inlined functions and *uninline* them. For example, if you see a string copy, do **not** write the copy loop manually! Instead, call the inline function and let the compiler inline the function for you.
     * Identify duplicate pieces of code: those are usually a sign that a function was inlined. Refactor the duplicated piece of code into a separate function (or figure out what function has been inlined) and call it. The [cheatsheet](/cheatsheet) can help with this.
+    * Undo other compiler optimisations too, such as loop unrolling, look-up tables or odd if-else chains (use a `switch` instead), and merged or duplicated conditions. If your code matches but doesn't look like something a developer would normally write, there is probably an optimisation left to undo.
     * Non-inline function calls can just be stubbed if you don't feel like decompiling them at the moment. To "stub" a function, just declare the function (and the enclosing class/namespace/etc. if needed) without implementing/defining it.
     * Follow the [coding style guidelines](coding-guidelines) where applicable.
 
@@ -93,6 +101,14 @@ If you are new to the project, we recommend that you read this entire document a
     * If your editor does not have built-in support for clang-format, or if you need to invoke clang-format in a terminal, you'll need to install it manually.
       * If your Linux distro or system (e.g. macOS) does not package clang-format 19, you can download it from [the LLVM project website here](https://releases.llvm.org/download.html).
 
+## Pull requests
+
+* Keep PRs small and focused: one subsystem or component per PR. If your change spans many components, split it into several smaller PRs.
+* Include details of your research, e.g. where the class, variable and function names come from, and which cleaner code patterns you tried that did not match.
+* Do not commit one-off scripts.
+* Do not include any assembly or disassembly in code, comments, commit messages or PR descriptions.
+* If you used AI tools, disclose the vendor and model (e.g. `GitHub Copilot on GPT 5.6 Sol`) in your commit messages and PR description, and have a human review the change before opening the PR.
+
 ## Matching hacks
 
 If a function is inlined, you should try as hard as possible to make it match perfectly. It is better to use weird code or small hacks to force a match as differences would otherwise appear in every single function that inlines the non-matching code, which makes it much more complicated to match other functions.
@@ -129,6 +145,10 @@ Use matching hacks sparingly: they should pretty much only be used as a last res
 * Declare a function `[[gnu::noinline]]` to forbid LLVM from inlining it. This is useful when a function is getting inlined when it shouldn't, and you haven't figured out why yet.
 * `__builtin_assume(condition);` tells the LLVM optimiser to assume that `condition` is true. (If it isn't, you get undefined behaviour.) This can usually affect codegen in a drastic manner.
 * `asm("");` prevents LLVM from optimising memory accesses in some situations.
+
+Do **not** use inline assembly for matching: any PR with a substantial amount of it will be rejected. Even for a small amount, prefer keeping the function non-matching when it is trivially provable that it is equivalent to the original (e.g. register renaming or reordering). `asm("")` as an optimisation barrier is the only exception.
+
+Do not use `goto` for matching either, unless it is **absolutely** necessary and it is plausible that the original source code used `goto`.
 
 ## Library code
 

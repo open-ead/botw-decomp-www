@@ -35,6 +35,7 @@ The most important rule: look around and follow the existing code style (formatt
         <br /> While parentheses are technically useless here, most people do not know their operator precedence for && and || by heart, so it's better to just add parens to make it clear what is being meant.
 * Avoid `using namespace` at namespace/global scope.
 * Declare variables close to their usage point: C89 style declarations are an unnecessary antipattern in any modern language and discouraged.
+* Do not use C-style casts. Only use functional-style casts (`u32(x)`) to convert an `enum class` to its underlying integer type, to narrow a number type, or to convert between signed and unsigned types.
 
 ### Header files
 
