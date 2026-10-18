@@ -81,7 +81,7 @@ void __fastcall ksys::res::Handle::Handle(ksys::res::Handle *this)
   this->mStatus = 0;
   this->mUnit = 0LL;
   this->vtable = &ksys::res::Handle::vt;
-  ksys::util::ManagedTaskHandle::ManagedTaskHandle(&this->mTaskHandle);
+  ksys::ManagedTaskHandle::ManagedTaskHandle(&this->mTaskHandle);
   this->field_40 = 0LL;
   this->field_48 = 0LL;
 }
@@ -92,10 +92,10 @@ is automatically generated based on the class definition:
 ```cpp
 // irrelevant details were simplified or removed
 struct Handle {
-    u8 mFlags = 1;
-    Status mStatus = Status::_0;
+    sead::TypedBitFlag<Flag> mFlags = Flag::Dummy;
+    Status mStatus = Status::NoFile;
     ResourceUnit* mUnit = nullptr;
-    util::ManagedTaskHandle mTaskHandle;
+    ManagedTaskHandle mTaskHandle;
     sead::ListNode mListNode;
 };
 ```
