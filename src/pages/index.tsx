@@ -10,7 +10,7 @@ import Layout from '@theme/Layout';
 
 import styles from './index.module.css';
 
-function Block({ title, children }) {
+function Block({ title, children }: { title: string, children: React.ReactNode }) {
   return (
     <div className={clsx("col", styles.card)}>
       <h2>{title}</h2>

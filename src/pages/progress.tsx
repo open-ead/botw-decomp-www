@@ -5,7 +5,7 @@ import React, {
   useState,
 } from 'react';
 
-import { ChartOptions } from 'chart.js/auto';
+import { ChartData, ChartOptions } from 'chart.js/auto';
 import clsx from 'clsx';
 import { Chart } from 'react-chartjs-2';
 
@@ -15,7 +15,7 @@ import Layout from '@theme/Layout';
 
 import styles from './progress.module.css';
 
-function InfoRow({ title, value, secondLevel = false }) {
+function InfoRow({ title, value, secondLevel = false }: { title: string, value: string, secondLevel?: boolean }) {
   return (
     <p className={clsx(styles.infoRow, secondLevel && styles.secondLevel)}>
       <span className="key">{secondLevel && "- "}{title}</span>{" "}
@@ -44,7 +44,7 @@ export default function Progress() {
   const [nmMajor, setNmMajor] = useState("?.???%");
 
   const [entries, setEntries] = useState<progressUtils.Entry[]>([]);
-  const [chartData, setChartData] = useState(null);
+  const [chartData, setChartData] = useState<ChartData<"line", { x: Date, y: number }[]> | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -97,7 +97,7 @@ export default function Progress() {
         title: { display: true, text: "Decompiled %" },
         beginAtZero: true,
         ticks: {
-          callback: (value: number, _index: any, _values: any) => formatPercent(value, 2),
+          callback: (value) => formatPercent(Number(value), 2),
         },
       },
     },

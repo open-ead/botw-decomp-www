@@ -2,8 +2,9 @@ import React from 'react';
 
 import Head from '@docusaurus/Head';
 import Layout from '@theme-original/Layout';
+import type { Props } from '@theme/Layout';
 
-export default function LayoutWrapper(props) {
+export default function LayoutWrapper(props: Props) {
   // work around a Docusaurus bug that causes data-theme to be light
   // in SSR even though the default is dark
   return (
