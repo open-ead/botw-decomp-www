@@ -10,10 +10,10 @@ Follow these steps to set up the project.
 
 You'll need to install the following programming tools:
 
-* Python 3.6 or newer with [pip](https://pip.pypa.io/en/stable/installation/)
+* Python 3.12 or newer with [pip](https://pip.pypa.io/en/stable/installation/)
 * Ninja
-* CMake 3.15+
-    * If you are on Ubuntu 18.04, you must first [update CMake by using the official CMake APT repository](https://apt.kitware.com/).
+* CMake 3.30+
+    * If your distribution ships an older version (e.g. Ubuntu 24.04), install a newer one from the [official CMake APT repository](https://apt.kitware.com/) or with `pip install cmake`.
 * ccache (to speed up builds)
 * xdelta3
 * Clang (not for compiling BotW code, but for compiling Rust tools)
@@ -32,10 +32,10 @@ Additionally, you'll also need:
 
 ## Dump the executable from a Switch
 
-Next, you'll need to acquire the **original 1.5.0 or 1.9.0 `main` NSO executable**.
+Next, you'll need to acquire the **original 1.5.0, 1.6.0 or 1.9.0 `main` NSO executable**.
 
 * To dump it from a Switch, follow [the instructions on the wiki](https://zeldamods.org/wiki/Help:Dumping_games#Dumping_binaries_.28executable_files.29).
-* You do not need to dump the entire game (RomFS + ExeFS + DLC). Just dumping the 1.5.0 or 1.9.0 ExeFS is sufficient.
+* You do not need to dump the entire game (RomFS + ExeFS + DLC). Just dumping the ExeFS is sufficient.
 * The compressed 1.5.0 NSO has the following SHA256 hash: `898dc199301f7c419be5144bb5cb27e2fc346e22b27345ba3fb40c0060c2baf8`
 
 ## Set up the repo
@@ -51,7 +51,7 @@ Next, you'll need to acquire the **original 1.5.0 or 1.9.0 `main` NSO executable
 
 3. Run `tools/setup.py [path to the dumped 'main' file]`
     * This will:
-        * setup a virtual python environment (with the built-in `venv` module) and install the necessary python dependencies
+        * set up a virtual Python environment in `tools/common/.venv` and install the necessary Python dependencies
         * install a check tool (`tools/check`) to check for differences in decompiled code
         * convert the executable if necessary
         * set up [Clang 4.0.1](https://releases.llvm.org/download.html#4.0.1) by downloading it from the official LLVM website
