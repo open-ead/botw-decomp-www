@@ -1,7 +1,7 @@
 // @ts-check
 // Note: type annotations allow type checking and IDEs autocompletion
 
-const darkCodeTheme = require('prism-react-renderer/themes/vsDark');
+const {themes} = require('prism-react-renderer');
 
 const REPO_URL = 'https://github.com/zeldaret/botw';
 const DISCORD_URL = 'https://discord.zelda.deco.mp';
@@ -15,10 +15,14 @@ const config = {
   favicon: 'img/favicon.ico',
   trailingSlash: false,
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   baseUrlIssueBanner: false,
+  markdown: {
+    hooks: {
+      onBrokenMarkdownLinks: 'warn',
+    },
+  },
 
-  plugins: [require.resolve('@cmfcmf/docusaurus-search-local')],
+  plugins: [[require.resolve('@cmfcmf/docusaurus-search-local'), {indexBlog: false}]],
 
   // Even if you don't use internalization, you can use this field to set useful
   // metadata like html lang. For example, if your site is Chinese, you may want
@@ -37,10 +41,7 @@ const config = {
           routeBasePath: '/',
           sidebarPath: require.resolve('./sidebars.js'),
         },
-        blog: {
-          showReadingTime: true,
-          blogSidebarCount: 0,
-        },
+        blog: false,
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
@@ -115,7 +116,7 @@ const config = {
         respectPrefersColorScheme: false,
       },
       prism: {
-        darkTheme: darkCodeTheme,
+        darkTheme: themes.vsDark,
         defaultLanguage: 'cpp',
       },
     }),

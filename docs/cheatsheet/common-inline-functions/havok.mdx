@@ -52,7 +52,7 @@ hkVector4f result;
 result.setCross(lhs, rhs);
 ```
 
-### hkVector4f::dot<3> (dot product)
+### hkVector4f::dot\<3> (dot product)
 
 ```cpp
 dot = (int8x16_t)vmulq_f32(lhs, rhs);
@@ -64,9 +64,9 @@ dot.n128_f32[0] = vpadd_f32((float32x2_t)dot.n128_u64[0], (float32x2_t)dot.n128_
 hkSimdReal dot = lhs.dot<3>(rhs);
 ```
 
-### hkVector4f::lengthSquared<3>
+### hkVector4f::lengthSquared\<3>
 
-This is a special case of hkVector4f::dot<3>.
+This is a special case of hkVector4f::dot\<3>.
 
 ```cpp
 len = vmulq_f32(vec, vec);
@@ -78,9 +78,9 @@ len.n128_u64[0] = vpadd_f32((float32x2_t)len.n128_u64[0], (float32x2_t)len.n128_
 hkSimdReal len = vec.lengthSquared<3>();
 ```
 
-### hkVector4f::lengthInverse<3>
+### hkVector4f::lengthInverse\<3>
 
-This is hkVector4f::lengthSquared<3> followed by a square root inverse calculation.
+This is hkVector4f::lengthSquared\<3> followed by a square root inverse calculation.
 
 ```cpp
 // start of lengthSquared
@@ -110,9 +110,9 @@ inverse.n128_u64[1] = inverse.n128_u64[0];
 hkSimdReal inverse = vec.lengthInverse<3>();
 ```
 
-### hkVector4f::normalize<3>
+### hkVector4f::normalize\<3>
 
-This is lengthInverse<3> followed by a multiplication.
+This is lengthInverse\<3> followed by a multiplication.
 
 ```cpp
 // start of lengthSquared
