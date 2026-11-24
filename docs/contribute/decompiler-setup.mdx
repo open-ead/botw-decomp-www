@@ -12,13 +12,8 @@ A decompiler is a program that translates assembly code into pseudocode (somethi
 
 Pseudocode is much faster to read than assembly and can be made even more readable with some effort, so we highly recommend using a decompiler such as Hex-Rays or Ghidra.
 
-As of 2022, IDA/Hex-Rays is still ahead of competing tools for heavy analysis of large C++ AArch64 binaries,
-so we recommend acquiring a copy of IDA Pro 7.6+ if you want to contribute to this project.
-
-:::caution WIP
-We are looking at using Ghidra to replace IDA as the recommended tool as part of the decompilation database tooling revamp. 
-See [here](https://github.com/Pistonight/dejj) for more informaton.
-:::
+As of 2026, IDA/Hex-Rays is still ahead of competing tools for heavy analysis of large C++ AArch64 binaries,
+so we recommend acquiring a copy of IDA Pro 9.4+ if you want to contribute to this project.
 
 ## IDA (recommended) {#ida}
 
@@ -77,11 +72,6 @@ Alternative: write your C++ type definitions in a header file and then [import](
 
 [Ghidra](https://ghidra-sre.org/) is an open-source software reverse engineering tool developed by the NSA.
 If you cannot or do not want to use IDA, Ghidra is a decent alternative (though less ideal than IDA for RE'ing something like BotW).
-
-:::caution WIP
-We are looking at using Ghidra to replace IDA as the recommended tool as part of the decompilation database tooling revamp. 
-See [here](https://github.com/Pistonight/dejj) for more informaton.
-:::
 
 Note that you will need to import names and types manually and you will not be able to make use of the existing IDA reverse engineering database if you use Ghidra, so this is really not the recommended option.
 
