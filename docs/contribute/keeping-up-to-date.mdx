@@ -24,15 +24,16 @@ version of `master` on the upstream repository with the following command:
 # ensure you are on your default branch: main or master
 git fetch upstream master
 git merge upstream/master --ff-only
+
+# this updates the default branch of your fork to be synced
+# with the upstream
 git push
 
-# also update the submodules and re-run setup to update the tools
+# finally, update the submodules (libraries) in your local repo
 git submodule update --init --recursive
+# and install/update the tools
 tools/setup.py
 ```
-
-In some cases you may need to update your Rust toolchain before you can rebuild tools.
-If you're using `rustup`, this can be done by running `rustup update`.
 
 ## IDA database or Ghidra project {#ida-database}
 
